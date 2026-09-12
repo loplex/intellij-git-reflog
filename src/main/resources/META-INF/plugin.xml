@@ -13,14 +13,21 @@
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
     <description><![CDATA[
-        Example of a plugin that is ready to work in a distributed environment.<br>
-        <em>Plugin is supposed to be installed into both frontend and backend IDE,
-        the set of features to be available is determined by their registration in either backend or frontend-specific XML descriptor files</em>
-    ]]></description>
+        Enter short description for your plugin here.<br>
+        <em>most HTML tags may be used</em>
+        ]]></description>
 
-    <content>
-        <module name="ij.git.reflog.shared" loading="required"/>
-        <module name="ij.git.reflog.frontend"/>
-        <module name="ij.git.reflog.backend"/>
-    </content>
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <resource-bundle>messages.MyMessageBundle</resource-bundle>
+
+    <!-- Extensions defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="MyToolWindow" factoryClass="cz.loplex.MyToolWindowFactory"
+                    icon="AllIcons.Toolwindows.ToolWindowPalette"/>
+    </extensions>
+
 </idea-plugin>

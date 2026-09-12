@@ -5,26 +5,11 @@
 
 ## Overview
 
-This repository implements a modular IntelliJ Platform plugin.
-It uses content modules as a unit of functionality that the plugin consists of.
-Content modules are split into:
-
-- `frontend` - UI code
-- `backend` - stateful business logic
-- `shared`
-
-Frontend communicates with the backend through RPC.
-
-This structure allows to:
-
-- separate UI code from business logic
-- implement features in a way they work natively in **[split mode][docs:remote-dev]** just like in the ordinary
-  monolithic IDE
-- keep the plugin code cleaner
+This repository implements an IntelliJ Platform plugin.
 
 ## Demo Functionality
 
-The sample plugin adds a `ModularPlugin` tool window with a chat-style UI implemented with the Swing framework.
+The sample plugin adds a `My Tool Window` tool window with a simple functionality of shuffling a random number.
 
 ## Plugin structure
 
@@ -33,56 +18,37 @@ A generated project contains the following content structure:
 ```
 .
 ├── .run/                   Predefined Run/Debug Configurations
-├── backend/                Backend module – business logic
-│   ├── build.gradle.kts    Backend dependencies
-│   └── src/main/
-│       ├── kotlin/         Kotlin production sources
-│       └── resources/      ij.git.reflog.backend.xml
-├── frontend/               Frontend module – UI and presentation
-│   ├── build.gradle.kts    Frontend dependencies
-│   └── src/main/
-│       ├── kotlin/         Kotlin production sources
-│       └── resources/      ij.git.reflog.frontend.xml
-├── shared/                 Shared module – cross-boundary contracts
-│   ├── build.gradle.kts    Shared dependencies
-│   └── src/main/
-│       ├── kotlin/         Kotlin production sources
-│       └── resources/      ij.git.reflog.shared.xml
-├── gradle/
+├── gradle
 │   ├── wrapper/            Gradle Wrapper
-│   └── libs.versions.toml  Version catalog
-├── src
+│   ├── libs.versions.toml  Version catalog
+├── src                     Plugin sources
 │   └── main
-│       └── resources/
-│           └── META-INF/   Plugin configuration file and logo
+│       ├── kotlin/         Kotlin production sources
+│       └── resources/      Plugin resources
+│           ├── META-INF/   Plugin configuration file and logo
+│           └── messages/   Message bundles
 ├── .gitignore              Git ignoring rules
-├── build.gradle.kts        Root build – assembles the final plugin
+├── build.gradle.kts        Gradle build configuration
 ├── gradle.properties       Gradle configuration properties
 ├── gradlew                 *nix Gradle Wrapper script
 ├── gradlew.bat             Windows Gradle Wrapper script
+├── README.md               This file
 └── settings.gradle.kts     Gradle project settings
 ```
 
+In addition to the configuration files, the most crucial part is the `src` directory, which contains our implementation
+and the manifest for our plugin – [plugin.xml][file:plugin.xml].
+
 > [!NOTE]
-> To use Java in your plugin, create the appropriate `/src/main/java` directory within the desired module.
+> To use Java in your plugin, create the `/src/main/java` directory.
 
 The plugin logo is placed in `src/main/resources/META-INF/pluginIcon.svg`.
 See [Plugin Logo][docs:logo] for more information and logo requirements.
 
-### Module Layout
-
-- `root project` assembles the final plugin, declares the main IntelliJ Platform dependency, enables split mode, and
-  includes the `shared`, `frontend`, and `backend` plugin modules in the final distribution.
-- `shared` contains contracts that both sides must understand: RPC interfaces, DTOs, serializers, and shared model
-  types. Put a cross-boundary API here.
-- `frontend` contains UI-only code and presentation logic: the tool window registration, Swing UI, view models, and the
-  frontend adapter that talks to the backend via RPC.
-- `backend` contains project-level services and business logic: access to project, file system, and external processes,
-  message creation, response generation, and the RPC implementation exposed to the frontend.
-
 ## Build script
 
-The root [build.gradle.kts][file:build.gradle.kts] assembles the final plugin and applies the following Gradle plugins:
+The [build.gradle.kts][file:build.gradle.kts] is the core of the project definition.
+It applies three Gradle plugins:
 
 | Plugin                            | Description                                                                      |
 |-----------------------------------|----------------------------------------------------------------------------------|
@@ -106,19 +72,13 @@ testFramework(TestFrameworkType.Platform)
 
 See [Testing][docs:testing] for more information
 
-## Plugin configuration files
+## Plugin configuration file
 
-The root [plugin.xml][file:plugin.xml] file located in `src/main/resources/META-INF` provides general information about
-the plugin, its dependencies, and references the per-module plugin descriptors.
+The plugin configuration file is a [plugin.xml][file:plugin.xml] file located in the `src/main/resources/META-INF`
+directory.
+It provides general information about the plugin, its dependencies, extensions, and listeners.
 
-Each module ships its own plugin descriptor in its `src/main/resources/` directory:
-
-- `ij.git.reflog.backend.xml` – registers backend extensions and services
-- `ij.git.reflog.frontend.xml` – registers frontend extensions and tool windows
-- `ij.git.reflog.shared.xml` – registers shared extensions and interfaces
-
-You can read more about plugin configuration files in the [Plugin Configuration File][docs:plugin.xml] section of our
-documentation.
+You can read more about this file in the [Plugin Configuration File][docs:plugin.xml] section of our documentation.
 
 ### Plugin ID and name
 
@@ -131,44 +91,16 @@ Please note that Gradle properties `rootProject.name` and `project.group` don't 
 elements.
 There is no IntelliJ Platform-related reason they should as they serve different functions.
 
-## Remote Development Ready Architecture
-
-The demo is intentionally split so that the UI stays frontend-only and the business logic stays backend-only.
-This ensures optimal UX in the remote development scenario where the IDE has separate frontend and backend processes.
-This is what we call **Split Mode**.
-
-A high-level overview of the plugin structure:
-
-- a UI for a chat with an AI assistant natively rendered in the frontend IDE in split mode
-- data transfer between the frontend and backend via RPC
-- RPC implementation in the backend IDE is capable of touching any backend entities and APIs like a file system
-
-A more detailed explanation of how it is implemented:
-
-1. The frontend registers the tool window and creates `ChatViewModel`.
-2. `ChatViewModel` depends on the frontend-facing `ChatRepositoryApi` abstraction instead of directly depending on
-   backend services.
-3. `FrontendChatRepositoryModel` implements that abstraction by calling the shared `ChatRepositoryRpcApi` and collecting
-   the backend message `Flow`.
-4. The shared module defines `ChatRepositoryRpcApi` plus the DTOs used to cross the RPC boundary.
-5. The backend registers `BackendRpcApiProvider`, which exposes `BackendChatRepositoryRpcApi` as the RPC implementation.
-6. `BackendChatRepositoryRpcApi` resolves the backend project from `ProjectId` and delegates to
-   `BackendChatRepositoryModel`.
-7. `BackendChatRepositoryModel` owns the mutable message list and the demo response generation logic.
-
-This separation keeps the frontend focused on rendering, local UI state, and interaction handling, while the backend
-owns project-scoped state and logic that should execute on the backend side in split mode.
-
 ## Predefined Run/Debug configurations
 
 Within the default project structure, there is a `.run` directory provided containing predefined *Run/Debug
 configurations* that expose corresponding Gradle tasks:
 
-| Configuration name               | Description                                                                                                                                            |
-|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Run IDE with Plugin (Frontend)   | Runs [`:runIdeFrontend`][docs:intellij-platform-gradle-plugin-runIde] IntelliJ Platform Gradle Plugin task. Use the *Debug* icon for plugin debugging. |
-| Run IDE with Plugin (Backend)    | Runs [`:runIdeBackend`][docs:intellij-platform-gradle-plugin-runIde] IntelliJ Platform Gradle Plugin task. Use the *Debug* icon for plugin debugging.  |
-| Run IDE with Plugin (Split Mode) | Runs both *Run IDE (Backend)* and *Run IDE (Frontend)* configurations simultaneously to launch the plugin in split mode.                               |
+| Configuration name  | Description                                                                                                                                                                           |
+|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Run IDE with Plugin | Runs [`:runIde`][docs:intellij-platform-gradle-plugin-runIde] IntelliJ Platform Gradle Plugin task. Use the *Debug* icon for plugin debugging.                                        |
+| Run Tests           | Runs [`:check`][gradle:lifecycle-tasks] Gradle task.                                                                                                                                  |
+| Run Verifications   | Runs [`:verifyPlugin`][docs:intellij-platform-gradle-plugin-verifyPlugin] IntelliJ Platform Gradle Plugin task to check the plugin compatibility against the specified IntelliJ IDEs. |
 
 > [!NOTE]
 > You can find the logs from the running task in the `idea.log` tab.
@@ -180,7 +112,8 @@ configurations* that expose corresponding Gradle tasks:
 required steps.
 
 Releasing a plugin to [JetBrains Marketplace](https://plugins.jetbrains.com) is a straightforward operation that uses
-the `publishPlugin` Gradle task provided by the [intellij-platform-gradle-plugin][gh:intellij-platform-gradle-plugin].
+the `publishPlugin` Gradle task provided by
+the [intellij-platform-gradle-plugin][docs:intellij-platform-gradle-plugin-docs].
 
 You can also upload the plugin to the [JetBrains Plugin Repository](https://plugins.jetbrains.com/plugin/upload)
 manually via UI.
@@ -194,18 +127,16 @@ manually via UI.
 - [IntelliJ Platform UI Guidelines][jb:ui-guidelines]
 - [JetBrains Marketplace Paid Plugins][jb:paid-plugins]
 - [IntelliJ SDK Code Samples][gh:code-samples]
-- [Remote Development / Split Mode][docs:remote-dev]
 
 [docs]: https://plugins.jetbrains.com/docs/intellij
-[docs:logo]: https://plugins.jetbrains.com/docs/intellij/plugin-icon-file.html?from=IJPluginReadmeFile
 [docs:plugin.xml]: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html?from=IJPluginReadmeFile
 [docs:publishing]: https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html?from=IJPluginReadmeFile
-[docs:remote-dev]: https://plugins.jetbrains.com/docs/intellij/plugin-content-modules.html?from=IJPluginReadmeFile
-[docs:target-version]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html?from=IJPluginReadmeFile#target-versions
-[docs:testing]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html?from=IJPluginReadmeFile#testing
 [docs:intellij-platform-gradle-plugin-docs]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html?from=IJPluginReadmeFile
 [docs:intellij-platform-gradle-plugin-runIde]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html?from=IJPluginReadmeFile#runIde
 [docs:intellij-platform-gradle-plugin-verifyPlugin]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html?from=IJPluginReadmeFile#verifyPlugin
+[docs:logo]: https://plugins.jetbrains.com/docs/intellij/plugin-icon-file.html?from=IJPluginReadmeFile
+[docs:target-version]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html?from=IJPluginReadmeFile#target-versions
+[docs:testing]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html?from=IJPluginReadmeFile#testing
 
 [file:build.gradle.kts]: ./build.gradle.kts
 [file:CHANGELOG.md]: ./CHANGELOG.md
@@ -213,7 +144,6 @@ manually via UI.
 [file:plugin.xml]: ./src/main/resources/META-INF/plugin.xml
 
 [gh:code-samples]: https://github.com/JetBrains/intellij-sdk-code-samples
-[gh:intellij-platform-gradle-plugin]: https://github.com/JetBrains/intellij-platform-gradle-plugin
 
 [gradle:lifecycle-tasks]: https://docs.gradle.org/current/userguide/java_plugin.html#lifecycle_tasks
 
