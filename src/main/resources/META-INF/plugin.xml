@@ -26,4 +26,25 @@
 
     <resource-bundle>messages.GitReflogBundle</resource-bundle>
 
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Persistent tabs of the Git and Commit tool windows are contributed through this extension point;
+             isInCommitToolWindow=false puts the tab next to Log and Console in the Git tool window. -->
+        <changesViewContent id="cz.loplex.git.reflog"
+                            tabName="Reflog"
+                            className="cz.loplex.reflog.ui.GitReflogContentProvider"
+                            predicateClassName="cz.loplex.reflog.ui.GitReflogContentVisibilityPredicate"
+                            preloaderClassName="cz.loplex.reflog.ui.GitReflogContentPreloader"
+                            displayNameSupplierClassName="cz.loplex.reflog.ui.GitReflogDisplayNameSupplier"
+                            isInCommitToolWindow="false"/>
+    </extensions>
+
+    <actions>
+        <group id="GitReflog.Toolbar">
+            <action id="GitReflog.Refresh"
+                    class="cz.loplex.reflog.actions.GitReflogRefreshAction"
+                    icon="AllIcons.Actions.Refresh"
+                    use-shortcut-of="Refresh"/>
+        </group>
+    </actions>
+
 </idea-plugin>
