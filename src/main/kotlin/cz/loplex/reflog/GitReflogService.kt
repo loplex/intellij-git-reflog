@@ -19,13 +19,14 @@ import kotlinx.coroutines.withContext
 internal class GitReflogService(private val coroutineScope: CoroutineScope) {
 
     /**
-     * Reads the reflog of [repository] in the background.
+     * Reads the reflog of [ref] in [repository] in the background.
      *
      * Both callbacks are invoked on the EDT: [onStarted] before git is asked anything, [onFinished] with either the
      * entries or the failure that git reported. Neither runs once the returned job is cancelled.
      */
-    fun loadHeadReflog(
+    fun loadReflog(
         repository: GitRepository,
+        ref: String,
         onStarted: () -> Unit,
         onFinished: (Result<List<GitReflogEntry>>) -> Unit,
     ): Job = coroutineScope.launch {
@@ -33,7 +34,7 @@ internal class GitReflogService(private val coroutineScope: CoroutineScope) {
 
         val result = withContext(Dispatchers.IO) {
             try {
-                Result.success(GitReflogReader.readHeadReflog(repository))
+                Result.success(GitReflogReader.readReflog(repository, ref))
             }
             catch (e: VcsException) {
                 Result.failure(e)

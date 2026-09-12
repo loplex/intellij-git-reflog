@@ -13,7 +13,7 @@ IntelliJ IDEA has no UI for it, so recovering work after a bad reset means leavi
 
 ## The Reflog tab
 
-The tab lists the reflog of `HEAD` for one repository, newest entry first:
+The tab lists the reflog of one ref of one repository, newest entry first:
 
 | Column      | Content                                                                                  |
 |-------------|------------------------------------------------------------------------------------------|
@@ -23,7 +23,12 @@ The tab lists the reflog of `HEAD` for one repository, newest entry first:
 | Description | the rest of the reflog message, for example `moving from master to feature`               |
 | Commit      | short hash of the commit `HEAD` pointed at afterwards                                     |
 
-The toolbar holds Refresh and, in projects with more than one Git repository, a repository selector.
+The toolbar holds a ref selector - `HEAD` or any local branch - Refresh, and, in projects with more than one Git
+repository, a repository selector.
+Switching the repository resets the ref to `HEAD`, and so does selecting a branch that has been deleted meanwhile;
+git answers a reflog request for a ref that is gone with a fatal error, while a branch that merely was never logged
+comes back as an empty reflog.
+
 The tab also re-reads the reflog on its own whenever the state of the repository changes, which covers every
 operation that writes a reflog record.
 

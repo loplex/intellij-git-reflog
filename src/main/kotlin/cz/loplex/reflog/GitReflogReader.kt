@@ -7,7 +7,7 @@ import git4idea.commands.GitLineHandler
 import git4idea.repo.GitRepository
 
 /**
- * Reads the reflog of `HEAD` for a given repository.
+ * Reads the reflog of a ref of a given repository.
  */
 internal object GitReflogReader {
     /**
@@ -25,20 +25,26 @@ internal object GitReflogReader {
     private const val SELECTOR_SEPARATOR = "@{"
 
     /** Upper bound for a single read; reflogs of long-lived repositories can hold tens of thousands of records. */
-    private const val MAX_ENTRIES = 1000
+    const val MAX_ENTRIES = 1000
+
+    /** The ref every repository has a reflog for, and the one the tab starts on. */
+    const val HEAD_REF = "HEAD"
 
     /**
-     * Runs `git reflog` and parses its output. Blocking - call from a background thread.
+     * Runs `git reflog` for [ref] and parses its output. Blocking - call from a background thread.
+     *
+     * A ref that exists but was never logged - a branch created while `core.logAllRefUpdates` was off - is not an
+     * error for git either; it answers with an empty reflog.
      *
      * @throws VcsException when git fails
      */
     @Throws(VcsException::class)
-    fun readHeadReflog(repository: GitRepository): List<GitReflogEntry> {
+    fun readReflog(repository: GitRepository, ref: String): List<GitReflogEntry> {
         // A repository without commits has no reflog at all, and asking git for one is an error, not an empty answer.
         if (repository.currentRevision == null) return emptyList()
 
         val handler = GitLineHandler(repository.project, repository.root, GitCommand.REF_LOG)
-        handler.addParameters("show", "--date=unix", "--max-count=$MAX_ENTRIES", "--pretty=format:$PRETTY_FORMAT", "HEAD")
+        handler.addParameters("show", "--date=unix", "--max-count=$MAX_ENTRIES", "--pretty=format:$PRETTY_FORMAT", ref)
         handler.setSilent(true)
 
         val result = Git.getInstance().runCommand(handler)
