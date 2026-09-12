@@ -2,6 +2,7 @@ package cz.loplex.reflog.ui
 
 import com.intellij.dvcs.DvcsUtil
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -17,18 +18,22 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.vcs.VcsDataKeys
+import com.intellij.ui.DoubleClickListener
+import com.intellij.ui.PopupHandler
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.TableSpeedSearch
 import com.intellij.ui.table.TableView
 import cz.loplex.reflog.GitReflogBundle
 import cz.loplex.reflog.GitReflogEntry
 import cz.loplex.reflog.GitReflogService
+import cz.loplex.reflog.actions.showReflogEntryDiff
 import git4idea.GitVcs
 import git4idea.branch.GitBranchUtil
 import git4idea.repo.GitRepository
 import git4idea.repo.GitRepositoryChangeListener
 import git4idea.repo.GitRepositoryManager
 import kotlinx.coroutines.Job
+import java.awt.event.MouseEvent
 import javax.swing.JComponent
 
 /**
@@ -53,6 +58,8 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
 
         setContent(ScrollPaneFactory.createScrollPane(table, true))
         toolbar = createToolbar()
+        installContextMenu()
+        installDoubleClickHandler()
 
         subscribeToRepositoryChanges()
         selectRepository(GitBranchUtil.getCurrentRepository(project) ?: repositories().firstOrNull())
@@ -104,6 +111,24 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         val toolbar = ActionManager.getInstance().createActionToolbar(TOOLBAR_PLACE, group, true)
         toolbar.targetComponent = this
         return toolbar.component
+    }
+
+    private fun installContextMenu() {
+        val group = ActionManager.getInstance().getAction(CONTEXT_MENU_GROUP_ID) as ActionGroup
+        PopupHandler.installPopupMenu(table, group, CONTEXT_MENU_PLACE)
+    }
+
+    /** Opens the changes of the double-clicked entry, the way the Log tab opens a commit. */
+    private fun installDoubleClickHandler() {
+        object : DoubleClickListener() {
+            override fun onDoubleClick(event: MouseEvent): Boolean {
+                if (table.rowAtPoint(event.point) < 0) return false
+                val repository = repository ?: return false
+                val entry = table.selectedObjects.singleOrNull() ?: return false
+                showReflogEntryDiff(project, repository, entry)
+                return true
+            }
+        }.installOn(table)
     }
 
     /**
@@ -163,5 +188,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         const val TAB_NAME: String = "Reflog"
         private const val TOOLBAR_PLACE = "GitReflogToolbar"
         private const val TOOLBAR_GROUP_ID = "GitReflog.Toolbar"
+        private const val CONTEXT_MENU_PLACE = "GitReflogPopup"
+        private const val CONTEXT_MENU_GROUP_ID = "GitReflog.ContextMenu"
     }
 }

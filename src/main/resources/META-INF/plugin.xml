@@ -45,6 +45,17 @@
                     icon="AllIcons.Actions.Refresh"
                     use-shortcut-of="Refresh"/>
         </group>
+
+        <group id="GitReflog.ContextMenu">
+            <action id="GitReflog.ShowDiff"
+                    class="cz.loplex.reflog.actions.GitReflogShowDiffAction"
+                    icon="AllIcons.Actions.Diff"
+                    use-shortcut-of="Diff.ShowDiff"/>
+            <!-- Both platform actions work off the revision numbers the tab publishes into the data context. -->
+            <reference ref="Vcs.Log.SelectInLog"/>
+            <separator/>
+            <reference ref="Vcs.CopyRevisionNumberAction"/>
+        </group>
     </actions>
 
 </idea-plugin>
