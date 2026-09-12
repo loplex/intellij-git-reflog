@@ -1,15 +1,56 @@
-# Ij-git-reflog
+# Git Reflog
 
 [![Twitter Follow](https://img.shields.io/badge/follow-%40JBPlatform-1DA1F2?logo=twitter)](https://twitter.com/JBPlatform)
 [![Developers Forum](https://img.shields.io/badge/JetBrains%20Platform-Join-blue)][jb:forum]
 
 ## Overview
 
-This repository implements an IntelliJ Platform plugin.
+This plugin adds a **Reflog** tab to the Git tool window, between the Log and the Console tab.
 
-## Demo Functionality
+`git reflog` is the record of every movement of `HEAD` - commits, checkouts, resets, rebases, amends.\
+It is also the only place where a commit that no branch points at any more can still be found.\
+IntelliJ IDEA has no UI for it, so recovering work after a bad reset means leaving the IDE for a terminal.
 
-The sample plugin adds a `My Tool Window` tool window with a simple functionality of shuffling a random number.
+## The Reflog tab
+
+The tab lists the reflog of `HEAD` for one repository, newest entry first:
+
+| Column      | Content                                                                                  |
+|-------------|------------------------------------------------------------------------------------------|
+| Selector    | `HEAD@{0}`, `HEAD@{1}`, ... - what `git reset`, `git checkout` and `git show` accept       |
+| Date        | when the entry was written, which for a checkout is unrelated to the commit's own date    |
+| Action      | the operation that moved `HEAD`: `commit`, `checkout`, `reset`, `rebase (finish)`, ...    |
+| Description | the rest of the reflog message, for example `moving from master to feature`               |
+| Commit      | short hash of the commit `HEAD` pointed at afterwards                                     |
+
+The toolbar holds Refresh and, in projects with more than one Git repository, a repository selector.
+The tab also re-reads the reflog on its own whenever the state of the repository changes, which covers every
+operation that writes a reflog record.
+
+### Actions on the selected entry
+
+- **Show Diff** - the changes of the commit, read with `git show`. Also opened by a double click.
+- **Select in Git Log** - jumps to the commit in the Log tab.
+- **Copy Revision Number** - the full hash.
+
+### Caveat: Select in Git Log only finds commits the Log knows
+
+The Log is built from commits reachable from refs, so an entry left behind by a reset or a rebase will not be found
+there. Show Diff reads the commit directly and works for those as well - which is the case the reflog exists for.
+
+### Caveat: one read returns at most 1000 entries
+
+Reflogs of long-lived repositories can hold tens of thousands of records, and the tab reads the newest 1000 of them.
+
+## How the tab is wired in
+
+- The tab is contributed through the `com.intellij.changesViewContent` extension point, which is how the persistent
+  tabs of the Git and Commit tool windows are registered, and is shown for projects that have Git as an active VCS.
+- Entries are read with `git reflog show` in a machine-readable format: one record per output line, fields separated
+  by `0x01`. See [GitReflogReader.kt][file:GitReflogReader.kt] for why the timestamp has to come from the `%gd`
+  placeholder and the `HEAD@{n}` index from the record position.
+- Show Diff, Select in Git Log and Copy Revision Number act on the revision numbers the tab publishes into the data
+  context; the latter two are platform actions that the plugin only references.
 
 ## Plugin structure
 
@@ -141,6 +182,7 @@ manually via UI.
 [file:build.gradle.kts]: ./build.gradle.kts
 [file:CHANGELOG.md]: ./CHANGELOG.md
 [file:gradle.properties]: ./gradle.properties
+[file:GitReflogReader.kt]: ./src/main/kotlin/cz/loplex/reflog/GitReflogReader.kt
 [file:plugin.xml]: ./src/main/resources/META-INF/plugin.xml
 
 [gh:code-samples]: https://github.com/JetBrains/intellij-sdk-code-samples
