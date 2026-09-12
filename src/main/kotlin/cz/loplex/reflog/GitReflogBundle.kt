@@ -1,14 +1,14 @@
-package cz.loplex
+package cz.loplex.reflog
 
 import com.intellij.DynamicBundle
 import org.jetbrains.annotations.Nls
 import org.jetbrains.annotations.PropertyKey
 import java.util.function.Supplier
 
-private const val BUNDLE = "messages.MyMessageBundle"
+private const val BUNDLE = "messages.GitReflogBundle"
 
-internal object MyMessageBundle {
-    private val instance = DynamicBundle(MyMessageBundle::class.java, BUNDLE)
+internal object GitReflogBundle {
+    private val instance = DynamicBundle(GitReflogBundle::class.java, BUNDLE)
 
     @JvmStatic
     fun message(key: @PropertyKey(resourceBundle = BUNDLE) String, vararg params: Any?): @Nls String {

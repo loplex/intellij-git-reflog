@@ -5,7 +5,7 @@
 
     <!-- Public plugin name should be written in Title Case.
      Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-name -->
-    <name>Ij-git-reflog</name>
+    <name>Git Reflog</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
     <vendor url="https://www.yourcompany.com">YourCompany</vendor>
@@ -13,21 +13,17 @@
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
     <description><![CDATA[
-        Enter short description for your plugin here.<br>
-        <em>most HTML tags may be used</em>
+        Adds a <b>Reflog</b> tab to the Git tool window.<br>
+        The tab shows the entries of <code>git reflog</code> for the current repository, so that commits that are no
+        longer reachable from any branch - the ones left behind by a reset, an amend or a rebase - stay one click away.
         ]]></description>
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.vcs</depends>
+    <depends>Git4Idea</depends>
 
-    <resource-bundle>messages.MyMessageBundle</resource-bundle>
-
-    <!-- Extensions defined by the plugin.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
-    <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="MyToolWindow" factoryClass="cz.loplex.MyToolWindowFactory"
-                    icon="AllIcons.Toolwindows.ToolWindowPalette"/>
-    </extensions>
+    <resource-bundle>messages.GitReflogBundle</resource-bundle>
 
 </idea-plugin>
