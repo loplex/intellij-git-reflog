@@ -14,11 +14,10 @@ import cz.loplex.reflog.ui.GitReflogDataKeys
  */
 internal class GitReflogLoadMoreAction : DumbAwareAction() {
 
-    /** Reads the panel's own state rather than the data context alone, which has to happen on the EDT. */
-    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
     override fun update(e: AnActionEvent) {
-        e.presentation.isEnabledAndVisible = e.getData(GitReflogDataKeys.PANEL)?.hasMore == true
+        e.presentation.isEnabledAndVisible = e.getData(GitReflogDataKeys.HAS_MORE) == true
     }
 
     override fun actionPerformed(e: AnActionEvent) {

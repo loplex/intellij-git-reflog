@@ -133,9 +133,10 @@ says nothing about the new one.
   placeholder, and [GitReflogParser.kt][file:GitReflogParser.kt] for why the `HEAD@{n}` index comes from the
   record's position in the output. The parser is a separate object so that the format can be covered by tests
   without a repository.
-- Every action acts on what the tab publishes into the data context: the selected entries for the plugin's own
+- Every action acts on what the tab publishes into the data context - the selected entries for the plugin's own
   actions, the revision numbers for Select in Git Log and Copy Revision Number, which are platform actions the
-  plugin only references.
+  plugin only references, and whether a page was left unread for Load More. Publishing that last one rather than
+  reading it off the panel is what lets every action update off the EDT.
 - The filters are `FilterComponent` subclasses added to the toolbar row directly. The Log's own wrapper for
   putting one in a toolbar, `VcsLogPopupComponentAction`, is marked internal, so the plugin opens the popup
   itself - as an action group updated off the EDT, with speed search, which is what the Log does too.
