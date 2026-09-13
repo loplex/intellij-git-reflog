@@ -80,10 +80,10 @@ filters are built on, so it looks the same in both tabs: **Actions** on its own 
 **Actions: commit** with a reset button once something is.
 
 The repository and the ref use the same component but are pickers rather than filters - there is always one
-repository being read and one ref being shown, and neither has an unset state to go back to. They therefore show
-their value alone with a drop-down arrow, and carry their name in the tooltip: `FilterComponent` only writes the
-`": "` between name and value while the filter counts as set, so a component that always has a value must not
-draw its name as well.
+repository being read and one ref being shown, and neither has an unset state to go back to. They read
+**Ref: HEAD** and keep a drop-down arrow where a filter has its reset. Since `FilterComponent` writes the `": "`
+between name and value only for a filter that counts as set, the pickers carry that separator in their name -
+which keeps the name and the value two labels, each in the colour the platform gives it.
 
 ### Actions on the selected entry
 

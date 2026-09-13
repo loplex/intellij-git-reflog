@@ -5,7 +5,6 @@ import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionGroupUtil
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.util.ui.FilterComponent
-import com.intellij.util.ui.FilterComponent.DrawLabelMode
 import java.util.function.Supplier
 
 /**
@@ -21,8 +20,8 @@ import java.util.function.Supplier
  * its toolbar row itself.
  *
  * Note how the class joins the name to the value: the ": " between them is inserted only while
- * [isValueSelected] holds. A component that always has a value to show therefore must not draw the name as well,
- * or the two end up written together - see [GitReflogSelectorComponent].
+ * [isValueSelected] holds, so anything that always has a value to show has to supply that separator itself - see
+ * [GitReflogSelectorComponent].
  */
 internal abstract class GitReflogFilterComponent(name: Supplier<String>) : FilterComponent(name) {
 
@@ -61,22 +60,24 @@ internal abstract class GitReflogFilterComponent(name: Supplier<String>) : Filte
  * A picker drawn as a filter, for the two toolbar items that are not filters at all: the repository and the ref.
  *
  * Both always show a value - there is always one repository being read and one ref being shown - and neither has
- * an unset state to return to. So the name is not drawn (it would be written against the value with nothing in
- * between) and the reset button stays a drop-down arrow; the name is the tooltip instead.
+ * an unset state to return to, so neither ever counts as set and the button stays a drop-down arrow rather than
+ * becoming a reset.
+ *
+ * Which is also why the separator is carried in the name: [FilterComponent] writes it only for a filter that
+ * counts as set, so a picker would otherwise read "RefHEAD". Putting it in the name keeps the name and the value
+ * two labels, each drawn in the colour the platform gives it, rather than one string.
  */
-internal abstract class GitReflogSelectorComponent(private val name: Supplier<String>) :
-    GitReflogFilterComponent(name) {
+internal abstract class GitReflogSelectorComponent(name: Supplier<String>) :
+    GitReflogFilterComponent(Supplier { name.get() + NAME_SEPARATOR }) {
 
-    init {
-        toolTipText = name.get()
-    }
-
-    final override fun shouldDrawLabel(): DrawLabelMode = DrawLabelMode.NEVER
-
-    /** Never "set": there is nothing to reset a picker to, and the arrow is the right button for it. */
     final override fun isValueSelected(): Boolean = false
 
     final override fun getEmptyFilterValue(): String = ""
 
     final override fun createResetAction(): Runnable = Runnable { }
+
+    private companion object {
+        /** What [FilterComponent] puts between the name and the value of a filter that is set. */
+        const val NAME_SEPARATOR = ": "
+    }
 }
