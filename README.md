@@ -42,6 +42,11 @@ that writes a reflog record. The selected entry survives such a re-read: it is r
 rather than by its selector, since every new record pushes `HEAD@{0}` down to `HEAD@{1}` and selectors therefore
 name a different entry after every commit.
 
+Re-reads are throttled to one every 300 ms, because an interactive rebase publishes the change it listens to once
+per step while each read costs a `rev-parse`, a walk of the log directory and a `git reflog show`. The first
+change of a burst schedules the read and the rest fold into it, so a long-running operation still refreshes while
+it runs rather than only at its end.
+
 ### Which refs can be shown
 
 Every ref the repository actually holds a reflog for, grouped in the selector by what kind of ref it is: `HEAD`,

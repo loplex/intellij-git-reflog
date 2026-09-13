@@ -28,6 +28,7 @@ import com.intellij.ui.SearchTextField
 import com.intellij.ui.TableUtil
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.table.TableView
+import com.intellij.util.SingleAlarm
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import cz.loplex.reflog.GitReflogBundle
@@ -62,6 +63,16 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     private val countLabel = JBLabel()
     private var loadJob: Job? = null
     private var disposed = false
+
+    /**
+     * Collapses a burst of repository changes into a single read. An interactive rebase publishes
+     * [GitRepository.GIT_REPO_CHANGE] once per step, and each read costs a `rev-parse`, a walk of the log
+     * directory and a `git reflog show`.
+     *
+     * Requests are throttled rather than postponed: the first change of a burst schedules the read and the rest
+     * fold into it, so a long-running rebase still refreshes while it runs instead of only at its end.
+     */
+    private val reloadAlarm = SingleAlarm.singleEdtAlarm(REPOSITORY_CHANGE_DELAY_MS, this, Runnable { reload() })
 
     /** Everything the last read returned; the table shows what passes [filter]. */
     private var entries: List<GitReflogEntry> = emptyList()
@@ -247,7 +258,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         val listener = GitRepositoryChangeListener { changed ->
             // The topic is published on a background thread; the panel state is only touched on the EDT.
             ApplicationManager.getApplication().invokeLater(
-                { if (changed == repository) reload() },
+                { if (changed == repository) reloadAlarm.request() },
                 ModalityState.any(),
                 { disposed },
             )
@@ -384,5 +395,6 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         private const val CONTEXT_MENU_PLACE = "GitReflogPopup"
         private const val CONTEXT_MENU_GROUP_ID = "GitReflog.ContextMenu"
         private const val SEARCH_FIELD_COLUMNS = 16
+        private const val REPOSITORY_CHANGE_DELAY_MS = 300
     }
 }
