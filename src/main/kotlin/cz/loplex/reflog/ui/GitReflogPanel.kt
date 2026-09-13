@@ -340,7 +340,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      * one, and never marked as a set filter: it narrows nothing, it only says what is being looked at.
      */
     private inner class RepositoryFilter :
-        GitReflogSelectorComponent(GitReflogBundle.lazyMessage("reflog.filter.repository.name")) {
+        GitReflogFilterComponent(GitReflogBundle.lazyMessage("reflog.filter.repository.name")) {
 
         override fun getCurrentText(): String = repository?.let { DvcsUtil.getShortRepositoryName(it) }.orEmpty()
 
@@ -353,7 +353,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
 
     /** Lets the user pick any ref the repository holds a reflog for, grouped by what kind of ref it is. */
     private inner class RefFilter :
-        GitReflogSelectorComponent(GitReflogBundle.lazyMessage("reflog.filter.ref.name")) {
+        GitReflogFilterComponent(GitReflogBundle.lazyMessage("reflog.filter.ref.name")) {
 
         override fun getCurrentText(): String = ref.presentableName
 
@@ -381,15 +381,15 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      * Narrows the table to chosen kinds of operation. The kinds offered are the ones present in the entries at
      * hand, so the popup never lists an operation this reflog does not contain.
      *
-     * Every kind starts out ticked, since every kind is shown; unticking one is what narrows the table. The All
-     * item above them is a command rather than a state - it ticks every kind again - which is what it is in the
-     * Log too, where the same item is a plain action among the values.
+     * Every kind starts out ticked, since every kind is shown; unticking one is what narrows the table. All at
+     * the top ticks every kind, and unticking All unticks every one of them - the two ends of the same range,
+     * which is what the item is there to reach in one step.
      */
     private inner class ActionKindFilter :
         GitReflogFilterComponent(GitReflogBundle.lazyMessage("reflog.filter.action.name")) {
 
         override fun getCurrentText(): String {
-            if (filter.excludedActionKinds.isEmpty()) return emptyFilterValue
+            if (filter.excludedActionKinds.isEmpty()) return GitReflogBundle.message("reflog.filter.action.all")
 
             val shown = actionKinds() - filter.excludedActionKinds
             return when (shown.size) {
@@ -399,25 +399,31 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             }
         }
 
-        /**
-         * Empty, the way the Log leaves an unset filter empty: the name alone then stands for "not filtered", and
-         * the name is only joined to a value once there is one.
-         */
-        override fun getEmptyFilterValue(): String = ""
-
-        override fun isValueSelected(): Boolean = filter.excludedActionKinds.isNotEmpty()
-
-        override fun createResetAction(): Runnable =
-            Runnable { setFilter(filter.copy(excludedActionKinds = emptySet())) }
-
         override fun createActionGroup(): ActionGroup {
             val group = DefaultActionGroup()
-            group.add(DumbAwareAction.create(GitReflogBundle.message("reflog.filter.action.all")) {
-                setFilter(filter.copy(excludedActionKinds = emptySet()))
-            })
+            group.add(AllActionKindsToggle())
             group.addSeparator()
             actionKinds().forEach { kind -> group.add(ActionKindToggle(kind)) }
             return group
+        }
+    }
+
+    /** Ticks every kind of operation at once, and unticks every one of them at once. */
+    private inner class AllActionKindsToggle :
+        ToggleAction(GitReflogBundle.message("reflog.filter.action.all")), DumbAware {
+
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun update(e: AnActionEvent) {
+            super.update(e)
+            e.presentation.keepPopupOnPerform = KeepPopupOnPerform.Always
+        }
+
+        override fun isSelected(e: AnActionEvent): Boolean = filter.excludedActionKinds.isEmpty()
+
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            val excluded = if (state) emptySet() else actionKinds().toSet()
+            setFilter(filter.copy(excludedActionKinds = excluded))
         }
     }
 

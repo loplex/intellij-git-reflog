@@ -80,15 +80,16 @@ Two filters narrow what the table shows, and they combine:
 Both run over the entries already read, which is what makes them instant. Whenever the table shows fewer entries
 than were read, the count at the end of the toolbar says so.
 
-The action filter is drawn by the platform's `FilterComponent`, which is what the Log's Branch, User and Date
-filters are built on, so it looks the same in both tabs: **Actions** on its own while nothing is picked, and
-**Actions: commit** with a reset button once something is.
+All three are drawn by the platform's `FilterComponent`, which is what the Log's Branch, User and Date filters
+are built on, so they look the same in both tabs: the name, then the value - **Ref: HEAD**, **Actions: All**,
+**Actions: 3 kinds**.
 
-The repository and the ref use the same component but are pickers rather than filters - there is always one
-repository being read and one ref being shown, and neither has an unset state to go back to. They read
-**Ref: HEAD** and keep a drop-down arrow where a filter has its reset. Since `FilterComponent` writes the `": "`
-between name and value only for a filter that counts as set, the pickers carry that separator in their name -
-which keeps the name and the value two labels, each in the colour the platform gives it.
+Unlike the Log's, each of them always has a value worth showing - there is one repository being read, one ref
+being shown, and some set of kinds getting through - so none has the Log's unset state where the name stands
+alone and a reset button clears it. They keep a drop-down arrow where a Log filter has its reset, and the popup
+is where a filter is put back. Since `FilterComponent` writes the `": "` between name and value only for a filter
+it considers set, the tab supplies that separator itself, which keeps the name and the value two labels, each in
+the colour the platform gives it.
 
 ### Actions on the selected entry
 

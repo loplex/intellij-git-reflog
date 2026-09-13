@@ -8,22 +8,27 @@ import com.intellij.util.ui.FilterComponent
 import java.util.function.Supplier
 
 /**
- * A filter drawn the way the Log tab draws its own.
+ * A toolbar filter drawn the way the Log tab draws its own.
  *
  * [FilterComponent] is the platform's rendering of a filter - the rounded frame, the hovering, the name in front
- * of the value, the reset button that appears once something is picked - and the Log's Branch, User and Date
- * filters are all built on it. The Reflog tab sits next to the Log and complements it, so the same filter has to
- * look the same in both.
+ * of the value - and the Log's Branch, User and Date filters are all built on it. The Reflog tab sits next to the
+ * Log and complements it, so the same filter has to look the same in both.
+ *
+ * Unlike the Log's, every filter here always has a value worth showing: there is one repository being read, one
+ * ref being shown, and some set of action kinds getting through. None of them has the Log's unset state, where
+ * the name stands alone and a reset button clears it, so none of them ever counts as set - the button stays a
+ * drop-down arrow, and the popup is where a filter is put back.
+ *
+ * Which is also why the separator between the name and the value is supplied here: [FilterComponent] writes it
+ * only for a filter that counts as set, so without this the toolbar would read "RefHEAD". Carrying it in the name
+ * keeps the name and the value two labels, each drawn in the colour the platform gives it, rather than one string.
  *
  * The popup is opened exactly as the Log opens its own, down to the speed search. Only the Log's wrapper for
  * putting such a component in a toolbar is off limits, being marked internal, so the tab adds the components to
  * its toolbar row itself.
- *
- * Note how the class joins the name to the value: the ": " between them is inserted only while
- * [isValueSelected] holds, so anything that always has a value to show has to supply that separator itself - see
- * [GitReflogSelectorComponent].
  */
-internal abstract class GitReflogFilterComponent(name: Supplier<String>) : FilterComponent(name) {
+internal abstract class GitReflogFilterComponent(name: Supplier<String>) :
+    FilterComponent(Supplier { name.get() + NAME_SEPARATOR }) {
 
     private val changeListeners = mutableListOf<Runnable>()
 
@@ -43,6 +48,12 @@ internal abstract class GitReflogFilterComponent(name: Supplier<String>) : Filte
         changeListeners.add(runnable)
     }
 
+    final override fun isValueSelected(): Boolean = false
+
+    final override fun getEmptyFilterValue(): String = ""
+
+    final override fun createResetAction(): Runnable = Runnable { }
+
     private fun showPopup() {
         JBPopupFactory.getInstance()
             .createActionGroupPopup(
@@ -54,30 +65,9 @@ internal abstract class GitReflogFilterComponent(name: Supplier<String>) : Filte
             )
             .showUnderneathOf(this)
     }
-}
-
-/**
- * A picker drawn as a filter, for the two toolbar items that are not filters at all: the repository and the ref.
- *
- * Both always show a value - there is always one repository being read and one ref being shown - and neither has
- * an unset state to return to, so neither ever counts as set and the button stays a drop-down arrow rather than
- * becoming a reset.
- *
- * Which is also why the separator is carried in the name: [FilterComponent] writes it only for a filter that
- * counts as set, so a picker would otherwise read "RefHEAD". Putting it in the name keeps the name and the value
- * two labels, each drawn in the colour the platform gives it, rather than one string.
- */
-internal abstract class GitReflogSelectorComponent(name: Supplier<String>) :
-    GitReflogFilterComponent(Supplier { name.get() + NAME_SEPARATOR }) {
-
-    final override fun isValueSelected(): Boolean = false
-
-    final override fun getEmptyFilterValue(): String = ""
-
-    final override fun createResetAction(): Runnable = Runnable { }
 
     private companion object {
-        /** What [FilterComponent] puts between the name and the value of a filter that is set. */
+        /** What [FilterComponent] itself puts between the name and the value of a filter that counts as set. */
         const val NAME_SEPARATOR = ": "
     }
 }
