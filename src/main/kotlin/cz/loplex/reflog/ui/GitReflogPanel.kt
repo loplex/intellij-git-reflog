@@ -81,6 +81,9 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     /** Refs the current repository has a reflog for, as of the last read. */
     private var refs: List<GitReflogRef> = listOf(GitReflogRef.HEAD)
 
+    /** How many records the next read asks git for; raised a page at a time by [loadMore]. */
+    private var limit = GitReflogReader.PAGE_SIZE
+
     /** Repository whose reflog is currently shown. */
     var repository: GitRepository? = null
         private set
@@ -88,6 +91,12 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     /** Ref whose reflog is currently shown. */
     var ref: GitReflogRef = GitReflogRef.HEAD
         private set
+
+    /**
+     * Whether older records exist that have not been read. A read that came back with exactly as many entries as
+     * it asked for has more behind it - git stops at the count, not at the end of the reflog.
+     */
+    val hasMore: Boolean get() = entries.size >= limit
 
     init {
         table.setShowGrid(false)
@@ -114,12 +123,21 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         this.repository = repository
         this.ref = GitReflogRef.HEAD
         this.refs = listOf(GitReflogRef.HEAD)
+        this.limit = GitReflogReader.PAGE_SIZE
         reload()
     }
 
     /** Switches the tab to the reflog of [ref] in the current repository. */
     fun selectRef(ref: GitReflogRef) {
         this.ref = ref
+        // Another reflog is another length; how far the previous one had been read says nothing about this one.
+        this.limit = GitReflogReader.PAGE_SIZE
+        reload()
+    }
+
+    /** Reads one more page of older records on top of what is already shown. */
+    fun loadMore() {
+        limit += GitReflogReader.PAGE_SIZE
         reload()
     }
 
@@ -136,6 +154,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         loadJob = GitReflogService.getInstance(project).loadReflog(
             repository,
             ref,
+            limit,
             // Entries already on screen stay until the new ones arrive; the text is only seen on the first read.
             onStarted = { table.emptyText.text = GitReflogBundle.message("reflog.status.loading") },
             onFinished = { result -> show(result) },
@@ -181,9 +200,8 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             else -> GitReflogBundle.message("reflog.status.no.match")
         }
         countLabel.text = when {
-            // Once the read hits its cap, the number of entries is a property of the cap, not of the reflog.
-            entries.size == GitReflogReader.MAX_ENTRIES ->
-                GitReflogBundle.message("reflog.count.capped", shown.size, entries.size)
+            // Once the read hits its limit, the number of entries is a property of the limit, not of the reflog.
+            hasMore -> GitReflogBundle.message("reflog.count.capped", shown.size, entries.size)
             shown.size != entries.size -> GitReflogBundle.message("reflog.count.filtered", shown.size, entries.size)
             else -> ""
         }

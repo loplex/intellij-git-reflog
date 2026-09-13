@@ -44,6 +44,9 @@
                     class="cz.loplex.reflog.actions.GitReflogRefreshAction"
                     icon="AllIcons.Actions.Refresh"
                     use-shortcut-of="Refresh"/>
+            <!-- No icon: in the toolbar the action shows its text, which is what says a page was left unread. -->
+            <action id="GitReflog.LoadMore"
+                    class="cz.loplex.reflog.actions.GitReflogLoadMoreAction"/>
         </group>
 
         <group id="GitReflog.ContextMenu">

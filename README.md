@@ -34,8 +34,8 @@ Stash entries are the exception to the Action/Description split: `git stash` wri
 `WIP on master: eddeef8 first`, where the colon separates the branch from the commit rather than an action from
 its details. The whole subject is kept as the description there and the Action column stays empty.
 
-The toolbar holds the ref selector, the action filter, Refresh, and, in projects with more than one Git
-repository, a repository selector. The filter field sits at the right end of the same row.
+The toolbar holds the ref selector, the action filter, Refresh, Load More where there is more to read, and, in
+projects with more than one Git repository, a repository selector. The filter field sits at the right end of the same row.
 
 The tab re-reads the reflog on its own whenever the state of the repository changes, which covers every operation
 that writes a reflog record. The selected entry survives such a re-read: it is recognised by what it records
@@ -95,11 +95,18 @@ the Log, and the reset is undoable through Local History.
 The Log is built from commits reachable from refs, so an entry left behind by a reset or a rebase will not be found
 there. Show Diff reads the commit directly and works for those as well - which is the case the reflog exists for.
 
-### Caveat: one read returns at most 1000 entries
+### Reading past the first page
 
-Reflogs of long-lived repositories can hold tens of thousands of records, and the tab reads the newest 1000 of
-them. Since the filters run over what was read, an entry older than that is not found by filtering either - the
-count next to the filter field says when the cap is in play.
+Reflogs of long-lived repositories hold tens of thousands of records, so a read asks for the newest 1000 of them
+rather than all. When a read comes back full - and only then - a **Load More** button appears in the toolbar and
+reads another 1000 on top.
+
+This matters because the filters run over what was read: an entry older than the last page is not found by
+filtering either. The count next to the filter field says when a page boundary is in play, and the selected entry
+survives the Load More the same way it survives a re-read.
+
+Switching the ref or the repository starts again at one page, since how far the previous reflog had been read
+says nothing about the new one.
 
 ## How the tab is wired in
 

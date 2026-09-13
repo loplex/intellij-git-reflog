@@ -31,8 +31,11 @@ internal object GitReflogReader {
     private const val FIELD_SEPARATOR = '\u0001'
     private const val SELECTOR_SEPARATOR = "@{"
 
-    /** Upper bound for a single read; reflogs of long-lived repositories can hold tens of thousands of records. */
-    const val MAX_ENTRIES = 1000
+    /**
+     * How many records a read asks for to begin with, and how many more each Load More adds. Reflogs of
+     * long-lived repositories hold tens of thousands of records, which is why none of them is read eagerly.
+     */
+    const val PAGE_SIZE = 1000
 
     private const val LOGS_DIRECTORY = "logs"
     private const val REFS_DIRECTORY = "refs"
@@ -40,18 +43,21 @@ internal object GitReflogReader {
     /**
      * Runs `git reflog` for [ref] and parses its output. Blocking - call from a background thread.
      *
+     * At most [limit] records are read, newest first; a read that returns exactly that many has older records
+     * behind it.
+     *
      * A ref that exists but was never logged - a branch created while `core.logAllRefUpdates` was off - is not an
      * error for git either; it answers with an empty reflog.
      *
      * @throws VcsException when git fails
      */
     @Throws(VcsException::class)
-    fun readReflog(repository: GitRepository, ref: GitReflogRef): List<GitReflogEntry> {
+    fun readReflog(repository: GitRepository, ref: GitReflogRef, limit: Int): List<GitReflogEntry> {
         // A repository without commits has no reflog at all, and asking git for one is an error, not an empty answer.
         if (repository.currentRevision == null) return emptyList()
 
         val handler = GitLineHandler(repository.project, repository.root, GitCommand.REF_LOG)
-        handler.addParameters("show", "--date=unix", "--max-count=$MAX_ENTRIES", "--pretty=format:$PRETTY_FORMAT", ref.name)
+        handler.addParameters("show", "--date=unix", "--max-count=$limit", "--pretty=format:$PRETTY_FORMAT", ref.name)
         handler.setSilent(true)
 
         val result = Git.getInstance().runCommand(handler)

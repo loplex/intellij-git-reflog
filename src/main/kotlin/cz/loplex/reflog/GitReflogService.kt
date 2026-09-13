@@ -28,7 +28,8 @@ internal data class GitReflogData(
 internal class GitReflogService(private val coroutineScope: CoroutineScope) {
 
     /**
-     * Reads the refs of [repository] that have a reflog, and the entries of [ref], in the background.
+     * Reads the refs of [repository] that have a reflog, and the newest [limit] entries of [ref], in the
+     * background.
      *
      * Both callbacks are invoked on the EDT: [onStarted] before git is asked anything, [onFinished] with either the
      * entries or the failure that git reported. Neither runs once the returned job is cancelled.
@@ -36,6 +37,7 @@ internal class GitReflogService(private val coroutineScope: CoroutineScope) {
     fun loadReflog(
         repository: GitRepository,
         ref: GitReflogRef,
+        limit: Int,
         onStarted: () -> Unit,
         onFinished: (Result<GitReflogData>) -> Unit,
     ): Job = coroutineScope.launch {
@@ -43,7 +45,7 @@ internal class GitReflogService(private val coroutineScope: CoroutineScope) {
 
         val result = withContext(Dispatchers.IO) {
             try {
-                Result.success(read(repository, ref))
+                Result.success(read(repository, ref, limit))
             }
             catch (e: VcsException) {
                 Result.failure(e)
@@ -53,13 +55,13 @@ internal class GitReflogService(private val coroutineScope: CoroutineScope) {
         withContext(Dispatchers.EDT) { onFinished(result) }
     }
 
-    private fun read(repository: GitRepository, ref: GitReflogRef): GitReflogData {
+    private fun read(repository: GitRepository, ref: GitReflogRef, limit: Int): GitReflogData {
         val refs = GitReflogReader.listRefs(repository)
         // The ref asked for can be gone by now - a branch deleted, a stash dropped - and git answers a reflog
         // request for a ref that no longer exists with a fatal error. HEAD is the one that is always there.
         val shown = if (ref in refs) ref else GitReflogRef.HEAD
 
-        return GitReflogData(refs, shown, GitReflogReader.readReflog(repository, shown))
+        return GitReflogData(refs, shown, GitReflogReader.readReflog(repository, shown, limit))
     }
 
     companion object {
