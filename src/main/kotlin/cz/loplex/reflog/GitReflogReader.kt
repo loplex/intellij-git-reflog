@@ -51,7 +51,7 @@ internal object GitReflogReader {
         val result = Git.getInstance().runCommand(handler)
         if (!result.success()) throw VcsException(result.errorOutputAsJoinedString)
 
-        return result.output.mapIndexedNotNull { index, line -> parseEntry(index, line) }
+        return result.output.mapIndexedNotNull { index, line -> parseEntry(index, line, ref) }
     }
 
     /**
@@ -106,24 +106,37 @@ internal object GitReflogReader {
         return gitDirectory to (paths.getOrNull(1) ?: gitDirectory)
     }
 
-    private fun parseEntry(index: Int, line: String): GitReflogEntry? {
+    private fun parseEntry(index: Int, line: String, ref: GitReflogRef): GitReflogEntry? {
         val fields = line.split(FIELD_SEPARATOR)
         if (fields.size < 3) return null
         val (hash, dateSelector, subject) = fields
-
-        // Reflog subjects are written as "<action>: <details>", e.g. "checkout: moving from master to feature".
-        // Entries written by older git versions or by scripts may carry no details at all.
-        val action = subject.substringBefore(':').trim()
-        val description = subject.substringAfter(':', missingDelimiterValue = "").trim()
 
         return GitReflogEntry(
             selector = dateSelector.substringBefore(SELECTOR_SEPARATOR) + SELECTOR_SEPARATOR + index + "}",
             hash = hash,
             timestamp = parseTimestamp(dateSelector),
-            action = action,
-            description = description,
+            action = actionOf(subject, ref),
+            description = descriptionOf(subject, ref),
         )
     }
+
+    /**
+     * Reflog subjects are written as "<action>: <details>", e.g. "checkout: moving from master to feature", and the
+     * part before the colon is what the entry did.
+     *
+     * The stash is the exception: its subjects read "WIP on master: eddeef8 first", where the colon separates the
+     * branch from the commit and nothing in the subject is an action. Every stash entry does the same thing, so
+     * there is no action to show and none to filter by either.
+     *
+     * Entries written by older git versions or by scripts may carry no colon at all, and are taken as an action
+     * with no details.
+     */
+    private fun actionOf(subject: String, ref: GitReflogRef): String =
+        if (ref.kind == GitReflogRef.Kind.STASH) "" else subject.substringBefore(':').trim()
+
+    private fun descriptionOf(subject: String, ref: GitReflogRef): String =
+        if (ref.kind == GitReflogRef.Kind.STASH) subject.trim()
+        else subject.substringAfter(':', missingDelimiterValue = "").trim()
 
     /** Extracts the seconds out of a `HEAD@{1789253693}` selector. */
     private fun parseTimestamp(dateSelector: String): Long {

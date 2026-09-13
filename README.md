@@ -23,6 +23,10 @@ The tab lists the reflog of one ref of one repository, newest entry first:
 | Description | the rest of the reflog message, for example `moving from master to feature`               |
 | Commit      | short hash of the commit `HEAD` pointed at afterwards                                     |
 
+Stash entries are the exception to the Action/Description split: `git stash` writes subjects such as
+`WIP on master: eddeef8 first`, where the colon separates the branch from the commit rather than an action from
+its details. The whole subject is kept as the description there and the Action column stays empty.
+
 The toolbar holds the ref selector, the action filter, Refresh, and, in projects with more than one Git
 repository, a repository selector. The filter field sits at the right end of the same row.
 
@@ -51,7 +55,8 @@ Two filters narrow what the table shows, and they combine:
   of the hash, so a pasted hash prefix finds its entry;
 - **the action filter** - a list of checkboxes over the kinds of operation. The kinds are collected from the
   entries at hand, so the list never offers an operation this reflog does not contain, and `commit (amend)` is
-  offered under `commit` rather than as a kind of its own.
+  offered under `commit` rather than as a kind of its own. A reflog whose entries carry no action at all - the
+  stash - leaves the filter disabled.
 
 Both run over the entries already read, which is what makes them instant. Whenever the table shows fewer entries
 than were read, the count next to the filter field says so.

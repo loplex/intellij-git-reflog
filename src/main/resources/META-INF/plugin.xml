@@ -51,9 +51,18 @@
                     class="cz.loplex.reflog.actions.GitReflogShowDiffAction"
                     icon="AllIcons.Actions.Diff"
                     use-shortcut-of="Diff.ShowDiff"/>
+            <separator/>
+            <action id="GitReflog.CheckoutRevision"
+                    class="cz.loplex.reflog.actions.GitReflogCheckoutRevisionAction"/>
+            <action id="GitReflog.NewBranch"
+                    class="cz.loplex.reflog.actions.GitReflogNewBranchAction"
+                    icon="AllIcons.Vcs.BranchNode"/>
+            <action id="GitReflog.Reset"
+                    class="cz.loplex.reflog.actions.GitReflogResetAction"
+                    icon="AllIcons.Vcs.Merge"/>
+            <separator/>
             <!-- Both platform actions work off the revision numbers the tab publishes into the data context. -->
             <reference ref="Vcs.Log.SelectInLog"/>
-            <separator/>
             <reference ref="Vcs.CopyRevisionNumberAction"/>
         </group>
     </actions>

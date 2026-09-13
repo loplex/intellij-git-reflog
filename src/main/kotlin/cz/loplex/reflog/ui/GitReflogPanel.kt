@@ -317,7 +317,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
 
         override fun update(e: AnActionEvent) {
             val chosen = filter.actionKinds
-            e.presentation.isEnabled = entries.isNotEmpty()
+            e.presentation.isEnabled = actionKinds().isNotEmpty()
             e.presentation.text = when {
                 chosen.isEmpty() -> GitReflogBundle.message("reflog.filter.action.all")
                 chosen.size == 1 -> chosen.first()
@@ -331,9 +331,16 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
                 setFilter(filter.copy(actionKinds = emptySet()))
             })
             group.addSeparator()
-            entries.map { it.actionKind }.distinct().sorted().forEach { kind -> group.add(ActionKindToggle(kind)) }
+            actionKinds().forEach { kind -> group.add(ActionKindToggle(kind)) }
             return group
         }
+
+        /**
+         * Kinds present in the entries at hand. Stash entries carry no action at all, which is why the empty kind
+         * is dropped rather than offered as a nameless item.
+         */
+        private fun actionKinds(): List<String> =
+            entries.mapNotNullTo(sortedSetOf()) { it.actionKind.ifEmpty { null } }.toList()
     }
 
     /** One checkbox of the action kind popup; the popup stays open so that several kinds can be picked at once. */

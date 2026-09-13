@@ -1,17 +1,13 @@
 package cz.loplex.reflog.actions
 
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.VcsNotifier
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.actions.diff.ShowDiffAction
 import cz.loplex.reflog.GitReflogBundle
 import cz.loplex.reflog.GitReflogEntry
-import cz.loplex.reflog.ui.GitReflogDataKeys
 import git4idea.changes.GitChangeUtils
 import git4idea.repo.GitRepository
 
@@ -21,21 +17,10 @@ import git4idea.repo.GitRepository
  * Unlike jumping into the Log, this works for commits that no ref points to any more - the resets, amends and
  * rebases that are the very reason to open the reflog - because the changes are read straight from `git show`.
  */
-internal class GitReflogShowDiffAction : DumbAwareAction() {
+internal class GitReflogShowDiffAction : GitReflogEntryAction() {
 
-    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
-
-    override fun update(e: AnActionEvent) {
-        e.presentation.isEnabled = e.project != null &&
-                e.getData(GitReflogDataKeys.REPOSITORY) != null &&
-                e.getData(GitReflogDataKeys.SELECTED_ENTRIES)?.size == 1
-    }
-
-    override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val repository = e.getData(GitReflogDataKeys.REPOSITORY) ?: return
-        val entry = e.getData(GitReflogDataKeys.SELECTED_ENTRIES)?.singleOrNull() ?: return
-        showReflogEntryDiff(project, repository, entry)
+    override fun perform(selection: GitReflogSelection) {
+        showReflogEntryDiff(selection.project, selection.repository, selection.entry)
     }
 }
 
