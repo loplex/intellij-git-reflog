@@ -11,7 +11,6 @@ import com.intellij.openapi.actionSystem.ex.ComboBoxAction
 import com.intellij.openapi.project.DumbAware
 import cz.loplex.reflog.GitReflogBundle
 import cz.loplex.reflog.GitReflogDiffMode
-import cz.loplex.reflog.GitReflogDiffModes
 import cz.loplex.reflog.ui.GitReflogDataKeys
 import javax.swing.JComponent
 
@@ -77,13 +76,17 @@ internal class GitReflogDiffModeSwitch : ComboBoxAction(), DumbAware {
 
     override fun update(e: AnActionEvent) {
         val modes = e.getData(GitReflogDataKeys.DIFF_MODES)
-        e.presentation.isEnabled = modes != null
+        val shown = modes?.effective
+
+        // Nothing on offer is a state of its own, and the switch says so rather than naming the mode that was
+        // picked: there is no comparison on screen for it to be naming.
+        e.presentation.isEnabled = modes != null && modes.applicable.isNotEmpty()
         // Named as well as valued, the way the tab's own filters read "Ref: HEAD": on its own, "Reflog Step"
         // says nothing about what it is a choice between.
-        e.presentation.text = shownMode(modes)
+        e.presentation.text = shown
             ?.let { GitReflogBundle.message("reflog.diff.mode.label", titleOf(it)) }
             ?: GitReflogBundle.message("reflog.diff.mode.none")
-        e.presentation.description = shownMode(modes)?.let(::descriptionOf)
+        e.presentation.description = shown?.let(::descriptionOf)
     }
 
     /**
@@ -95,12 +98,6 @@ internal class GitReflogDiffModeSwitch : ComboBoxAction(), DumbAware {
     override fun createPopupActionGroup(button: JComponent, context: DataContext): DefaultActionGroup =
         DefaultActionGroup(GitReflogDiffMode.entries.map(::GitReflogDiffModeAction))
 
-    /**
-     * What the button reads: the mode on screen, or, while nothing is selected for it to be on screen for, the
-     * one that was picked. The button says what the pane would do rather than going blank between selections.
-     */
-    private fun shownMode(modes: GitReflogDiffModes?): GitReflogDiffMode? =
-        modes?.let { it.effective ?: it.preferred }
 }
 
 /**
