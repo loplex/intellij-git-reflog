@@ -23,14 +23,25 @@ The tab lists the reflog of one ref of one repository, newest entry first:
 | Description | the rest of the reflog message, for example `moving from master to feature`               |
 | Commit      | short hash of the commit `HEAD` pointed at afterwards                                     |
 
-The toolbar holds a ref selector - `HEAD` or any local branch - the action filter, Refresh, and, in projects with
-more than one Git repository, a repository selector. The filter field sits at the right end of the same row.
-Switching the repository resets the ref to `HEAD`, and so does selecting a branch that has been deleted meanwhile;
-git answers a reflog request for a ref that is gone with a fatal error, while a branch that merely was never logged
-comes back as an empty reflog.
+The toolbar holds the ref selector, the action filter, Refresh, and, in projects with more than one Git
+repository, a repository selector. The filter field sits at the right end of the same row.
 
-The tab also re-reads the reflog on its own whenever the state of the repository changes, which covers every
-operation that writes a reflog record.
+The tab re-reads the reflog on its own whenever the state of the repository changes, which covers every operation
+that writes a reflog record.
+
+### Which refs can be shown
+
+Every ref the repository actually holds a reflog for, grouped in the selector by what kind of ref it is: `HEAD`,
+branches, remote-tracking branches, the stash, and anything else under `refs/` that has been logged.
+
+The list is read from the reflog files themselves rather than derived from the refs, because neither of the
+alternatives is dependable:
+
+- `git reflog list` would answer it outright, but it only arrived in git 2.45;
+- the refs disagree with the reflogs in both directions - a fresh clone leaves `refs/remotes/origin/HEAD` with a
+  reflog and `refs/remotes/origin/master` without one, and `refs/stash` shows up only once something is stashed.
+
+Switching the repository resets the ref to `HEAD`, and so does asking for a ref that has been deleted meanwhile.
 
 ### Filtering
 
@@ -72,7 +83,8 @@ count next to the filter field says when the cap is in play.
 - Show Diff, Select in Git Log and Copy Revision Number act on the revision numbers the tab publishes into the data
   context; the latter two are platform actions that the plugin only references.
 - A ref that exists but was never logged is not an error for git - it answers with an empty reflog - while a ref
-  that is gone is, so the tab falls back to `HEAD` before asking for a branch that has been deleted meanwhile.
+  that is gone is, so every read resolves the ref against the refs that currently have a reflog and falls back to
+  `HEAD` rather than surface that error.
 
 ## Plugin structure
 

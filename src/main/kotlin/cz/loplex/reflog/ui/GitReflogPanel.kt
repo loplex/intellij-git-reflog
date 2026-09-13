@@ -30,8 +30,10 @@ import com.intellij.ui.table.TableView
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import cz.loplex.reflog.GitReflogBundle
+import cz.loplex.reflog.GitReflogData
 import cz.loplex.reflog.GitReflogEntry
 import cz.loplex.reflog.GitReflogReader
+import cz.loplex.reflog.GitReflogRef
 import cz.loplex.reflog.GitReflogService
 import cz.loplex.reflog.actions.showReflogEntryDiff
 import git4idea.GitVcs
@@ -64,12 +66,15 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     private var entries: List<GitReflogEntry> = emptyList()
     private var filter = GitReflogFilter()
 
+    /** Refs the current repository has a reflog for, as of the last read. */
+    private var refs: List<GitReflogRef> = listOf(GitReflogRef.HEAD)
+
     /** Repository whose reflog is currently shown. */
     var repository: GitRepository? = null
         private set
 
-    /** Ref whose reflog is currently shown: `HEAD` or a local branch. */
-    var ref: String = GitReflogReader.HEAD_REF
+    /** Ref whose reflog is currently shown. */
+    var ref: GitReflogRef = GitReflogRef.HEAD
         private set
 
     init {
@@ -95,12 +100,13 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      */
     fun selectRepository(repository: GitRepository?) {
         this.repository = repository
-        this.ref = GitReflogReader.HEAD_REF
+        this.ref = GitReflogRef.HEAD
+        this.refs = listOf(GitReflogRef.HEAD)
         reload()
     }
 
     /** Switches the tab to the reflog of [ref] in the current repository. */
-    fun selectRef(ref: String) {
+    fun selectRef(ref: GitReflogRef) {
         this.ref = ref
         reload()
     }
@@ -115,12 +121,6 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             return
         }
 
-        // A branch shown here can be deleted meanwhile, and git answers a reflog request for a gone ref with a
-        // fatal error. HEAD is always there, so fall back to it rather than show that error.
-        if (ref != GitReflogReader.HEAD_REF && repository.branches.localBranches.none { it.name == ref }) {
-            ref = GitReflogReader.HEAD_REF
-        }
-
         loadJob = GitReflogService.getInstance(project).loadReflog(
             repository,
             ref,
@@ -130,10 +130,13 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         )
     }
 
-    private fun show(result: Result<List<GitReflogEntry>>) {
+    private fun show(result: Result<GitReflogData>) {
         result
-            .onSuccess { loaded ->
-                entries = loaded
+            .onSuccess { data ->
+                refs = data.refs
+                // The read falls back to HEAD when the ref asked for turns out to be gone.
+                ref = data.ref
+                entries = data.entries
                 applyFilter()
             }
             .onFailure { error ->
@@ -274,28 +277,34 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         }
     }
 
-    /** Lets the user pick the ref whose reflog is shown: `HEAD` or any local branch. */
+    /** Lets the user pick any ref the repository holds a reflog for, grouped by what kind of ref it is. */
     private inner class RefSelector : ComboBoxAction(), DumbAware {
 
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
         override fun update(e: AnActionEvent) {
             e.presentation.isEnabled = repository != null
-            e.presentation.text = ref
+            e.presentation.text = ref.presentableName
         }
 
         override fun createPopupActionGroup(button: JComponent, dataContext: DataContext): DefaultActionGroup {
             val group = DefaultActionGroup()
-            group.add(DumbAwareAction.create(GitReflogReader.HEAD_REF) { selectRef(GitReflogReader.HEAD_REF) })
-            group.addSeparator()
-            branchNames().forEach { branch ->
-                group.add(DumbAwareAction.create(branch) { selectRef(branch) })
+            var previousKind: GitReflogRef.Kind? = null
+            refs.forEach { ref ->
+                if (previousKind != null && ref.kind != previousKind) group.addSeparator(titleOf(ref.kind))
+                group.add(DumbAwareAction.create(ref.presentableName) { selectRef(ref) })
+                previousKind = ref.kind
             }
             return group
         }
 
-        private fun branchNames(): List<String> =
-            repository?.branches?.localBranches.orEmpty().map { it.name }.sorted()
+        private fun titleOf(kind: GitReflogRef.Kind): String = when (kind) {
+            GitReflogRef.Kind.HEAD -> GitReflogBundle.message("reflog.refs.head")
+            GitReflogRef.Kind.LOCAL_BRANCH -> GitReflogBundle.message("reflog.refs.local")
+            GitReflogRef.Kind.REMOTE_BRANCH -> GitReflogBundle.message("reflog.refs.remote")
+            GitReflogRef.Kind.STASH -> GitReflogBundle.message("reflog.refs.stash")
+            GitReflogRef.Kind.OTHER -> GitReflogBundle.message("reflog.refs.other")
+        }
     }
 
     /**
