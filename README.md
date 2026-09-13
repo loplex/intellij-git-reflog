@@ -75,11 +75,15 @@ Two filters narrow what the table shows, and they combine:
 Both run over the entries already read, which is what makes them instant. Whenever the table shows fewer entries
 than were read, the count at the end of the toolbar says so.
 
-The filters are drawn by the platform's `FilterComponent`, which is what the Log's Branch, User and Date filters
-are built on, so the same filter looks the same in both tabs: the name in front of the value, the value
-highlighted once something is picked, and a reset button next to it. The ref counts as unset while it is `HEAD`,
-which is where the tab starts and what it falls back to; the repository never counts as set, because picking one
-narrows nothing - it says which reflog is being looked at.
+The action filter is drawn by the platform's `FilterComponent`, which is what the Log's Branch, User and Date
+filters are built on, so it looks the same in both tabs: **Actions** on its own while nothing is picked, and
+**Actions: commit** with a reset button once something is.
+
+The repository and the ref use the same component but are pickers rather than filters - there is always one
+repository being read and one ref being shown, and neither has an unset state to go back to. They therefore show
+their value alone with a drop-down arrow, and carry their name in the tooltip: `FilterComponent` only writes the
+`": "` between name and value while the filter counts as set, so a component that always has a value must not
+draw its name as well.
 
 ### Actions on the selected entry
 

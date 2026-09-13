@@ -340,16 +340,9 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      * one, and never marked as a set filter: it narrows nothing, it only says what is being looked at.
      */
     private inner class RepositoryFilter :
-        GitReflogFilterComponent(GitReflogBundle.lazyMessage("reflog.filter.repository.name")) {
+        GitReflogSelectorComponent(GitReflogBundle.lazyMessage("reflog.filter.repository.name")) {
 
-        override fun getCurrentText(): String =
-            repository?.let { DvcsUtil.getShortRepositoryName(it) } ?: emptyFilterValue
-
-        override fun getEmptyFilterValue(): String = GitReflogBundle.message("reflog.filter.repository.none")
-
-        override fun isValueSelected(): Boolean = false
-
-        override fun createResetAction(): Runnable = Runnable { }
+        override fun getCurrentText(): String = repository?.let { DvcsUtil.getShortRepositoryName(it) }.orEmpty()
 
         override fun createActionGroup(): ActionGroup = DefaultActionGroup(
             repositories().map { repository ->
@@ -359,16 +352,10 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     }
 
     /** Lets the user pick any ref the repository holds a reflog for, grouped by what kind of ref it is. */
-    private inner class RefFilter : GitReflogFilterComponent(GitReflogBundle.lazyMessage("reflog.filter.ref.name")) {
+    private inner class RefFilter :
+        GitReflogSelectorComponent(GitReflogBundle.lazyMessage("reflog.filter.ref.name")) {
 
         override fun getCurrentText(): String = ref.presentableName
-
-        override fun getEmptyFilterValue(): String = GitReflogRef.HEAD.presentableName
-
-        /** HEAD is where the tab starts and what it falls back to, so it reads as the unset value. */
-        override fun isValueSelected(): Boolean = ref != GitReflogRef.HEAD
-
-        override fun createResetAction(): Runnable = Runnable { selectRef(GitReflogRef.HEAD) }
 
         override fun createActionGroup(): ActionGroup {
             val group = DefaultActionGroup()
@@ -406,7 +393,11 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             }
         }
 
-        override fun getEmptyFilterValue(): String = GitReflogBundle.message("reflog.filter.action.all")
+        /**
+         * Empty, the way the Log leaves an unset filter empty: the name alone then stands for "not filtered", and
+         * the name is only joined to a value once there is one.
+         */
+        override fun getEmptyFilterValue(): String = ""
 
         override fun isValueSelected(): Boolean = filter.actionKinds.isNotEmpty()
 
