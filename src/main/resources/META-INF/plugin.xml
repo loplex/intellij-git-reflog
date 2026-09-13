@@ -40,6 +40,14 @@
 
     <actions>
         <group id="GitReflog.Toolbar">
+            <!-- The platform's pair of preview buttons: one per side, neither pressed meaning no diff pane. -->
+            <action id="GitReflog.PreviewOnTheRight"
+                    class="cz.loplex.reflog.actions.GitReflogPreviewOnTheRightAction"
+                    icon="AllIcons.Actions.PreviewDetails"/>
+            <action id="GitReflog.PreviewAtTheBottom"
+                    class="cz.loplex.reflog.actions.GitReflogPreviewAtTheBottomAction"
+                    icon="AllIcons.Actions.PreviewDetailsVertically"/>
+            <separator/>
             <action id="GitReflog.Refresh"
                     class="cz.loplex.reflog.actions.GitReflogRefreshAction"
                     icon="AllIcons.Actions.Refresh"

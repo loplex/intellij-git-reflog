@@ -116,6 +116,20 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     var ref: GitReflogRef = GitReflogRef.HEAD
         private set
 
+    /** Whether the diff of the file selected in the file pane is shown at all. */
+    var isDiffPreviewVisible: Boolean
+        get() = changesPanel.isDiffPreviewVisible
+        set(value) {
+            changesPanel.isDiffPreviewVisible = value
+        }
+
+    /** Whether that diff spans the bottom of the tab rather than its right-hand side. */
+    var isDiffPreviewAtBottom: Boolean
+        get() = changesPanel.isDiffPreviewAtBottom
+        set(value) {
+            changesPanel.isDiffPreviewAtBottom = value
+        }
+
     /**
      * Whether older records exist that have not been read. A read that came back with exactly as many entries as
      * it asked for has more behind it - git stops at the count, not at the end of the reflog.

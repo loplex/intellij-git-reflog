@@ -14,5 +14,7 @@
 - Load More, which reads another page of older records once a read comes back full.
 - File and diff panes beside the table, as in the Log: the files the selected entry's commit changed, and
   the diff of the file selected among them.
+- Preview Diff on the Right and Preview Diff at the Bottom on the toolbar, the platform's pair of preview
+  buttons: they place the diff pane, and hide it when neither is pressed.
 - Show Diff, Select in Git Log and Copy Revision Number on the selected entry.
 - Checkout Revision, New Branch from Here and Reset Current Branch to Here on the selected entry.

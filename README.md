@@ -34,8 +34,8 @@ Stash entries are the exception to the Action/Description split: `git stash` wri
 `WIP on master: eddeef8 first`, where the colon separates the branch from the commit rather than an action from
 its details. The whole subject is kept as the description there and the Action column stays empty.
 
-The toolbar holds the ref selector, the action filter, Refresh, Load More where there is more to read, and, in
-projects with more than one Git repository, a repository selector. The filter field sits at the right end of the same row.
+The toolbar holds the ref selector, the action filter, the two diff pane buttons, Refresh, Load More where there
+is more to read, and, in projects with more than one Git repository, a repository selector. The filter field sits at the right end of the same row.
 
 The tab re-reads the reflog on its own whenever the state of the repository changes, which covers every operation
 that writes a reflog record. The selected entry survives such a re-read: it is recognised by what it records
@@ -50,9 +50,9 @@ it runs rather than only at its end.
 ### The files of the selected entry, and their diff
 
 Below and beside the table sit the same two panes the Log has: the files the selected entry's commit changed,
-and the diff of the file selected among them. The files pane sits next to the table, the diff spans the width of
-both - the arrangement the Log uses, for the same reason: a diff is read across, so it takes the width of the
-whole tab rather than the half a side-by-side split would leave it.
+and the diff of the file selected among them. The files pane sits next to the table, the diff wraps both - the
+arrangement the Log uses, for the same reason: a diff is the wider of the two, so it goes around the table
+rather than beside it.
 
 The files are read with `git show`, so they are there for a commit no ref reaches any more - the same reason
 Show Diff works where Select in Git Log does not.
@@ -65,8 +65,17 @@ not start a `git show` per row passed over. A selection that comes back to the s
 re-read does, by restoring the selection it had - is left alone rather than read again: what a commit changed
 cannot change.
 
-The positions of the two splitters are remembered outside the project, so the tab opens the way it was last left
-in any project.
+The diff pane is placed from the toolbar, by the platform's pair of preview buttons - **Preview Diff on the
+Right** and **Preview Diff at the Bottom**. Between them they cover all three states in a single click: neither
+pressed means no diff pane, either one pressed shows it on that side, and pressing the one already down hides it
+again. It starts at the bottom, where the Log starts its own.
+
+With no diff pane the viewer is not merely hidden but disposed, since it would otherwise keep loading file
+contents behind every move of the selection. The file pane stays either way: it is what says which files an entry
+touched, and it costs the same one `git show` regardless.
+
+Where the diff pane sits is remembered outside the project, so the tab opens the way it was last left in any
+project, and so are the positions of the two splitters.
 
 ### Which refs can be shown
 
