@@ -14,6 +14,7 @@ dependencies {
     intellijPlatform {
         intellijIdea("2025.3.5")
         testFramework(TestFrameworkType.Platform)
+        testFramework(TestFrameworkType.Plugin.VCS)
 
         // Git tool window integration: ChangesViewContentProvider + git command execution.
         bundledPlugin("Git4Idea")
