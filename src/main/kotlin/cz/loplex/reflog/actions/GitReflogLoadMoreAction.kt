@@ -2,6 +2,7 @@ package cz.loplex.reflog.actions
 
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.project.DumbAwareAction
 import cz.loplex.reflog.ui.GitReflogDataKeys
 
@@ -18,6 +19,9 @@ internal class GitReflogLoadMoreAction : DumbAwareAction() {
 
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabledAndVisible = e.getData(GitReflogDataKeys.HAS_MORE) == true
+        // Without this a toolbar draws an action that has no icon as an empty button rather than as its name,
+        // which for this one would leave the only thing saying a page was left unread saying nothing at all.
+        e.presentation.putClientProperty(ActionUtil.SHOW_TEXT_IN_TOOLBAR, true)
     }
 
     override fun actionPerformed(e: AnActionEvent) {
