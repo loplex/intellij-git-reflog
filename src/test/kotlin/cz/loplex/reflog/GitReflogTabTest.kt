@@ -27,6 +27,9 @@ class GitReflogTabTest : BasePlatformTestCase() {
         assertNotNull(actionManager.getAction("GitReflog.Toolbar"))
         assertNotNull(actionManager.getAction("GitReflog.ContextMenu"))
         assertNotNull(actionManager.getAction("GitReflog.ShowDiff"))
+        assertNotNull(actionManager.getAction("GitReflog.CheckoutRevision"))
+        assertNotNull(actionManager.getAction("GitReflog.NewBranch"))
+        assertNotNull(actionManager.getAction("GitReflog.Reset"))
     }
 
     fun testPanelBuildsWithoutAnyRepository() {

@@ -64,8 +64,17 @@ than were read, the count next to the filter field says so.
 ### Actions on the selected entry
 
 - **Show Diff** - the changes of the commit, read with `git show`. Also opened by a double click.
+- **Checkout Revision** - checks the working tree out at the commit, leaving the repository on a detached `HEAD`.
+- **New Branch from Here** - creates a branch at the commit and checks it out. A branch keeps the commit alive
+  past the expiry of the reflog, which is what makes this the way to rescue work rather than only look at it.
+- **Reset Current Branch to Here** - resets the branch the repository is on, in the mode picked in the dialog
+  (Soft, Mixed, Hard or Keep). It is always the current branch that moves, whichever ref's reflog is on screen.
 - **Select in Git Log** - jumps to the commit in the Log tab.
 - **Copy Revision Number** - the full hash.
+
+The three operations are carried out by git4idea itself - `GitBrancher` and `GitResetOperation` - so local
+changes, the progress and the notifications are handled exactly as they are for the same operations started from
+the Log, and the reset is undoable through Local History.
 
 ### Caveat: Select in Git Log only finds commits the Log knows
 
@@ -85,8 +94,12 @@ count next to the filter field says when the cap is in play.
 - Entries are read with `git reflog show` in a machine-readable format: one record per output line, fields separated
   by `0x01`. See [GitReflogReader.kt][file:GitReflogReader.kt] for why the timestamp has to come from the `%gd`
   placeholder and the `HEAD@{n}` index from the record position.
-- Show Diff, Select in Git Log and Copy Revision Number act on the revision numbers the tab publishes into the data
-  context; the latter two are platform actions that the plugin only references.
+- Every action acts on what the tab publishes into the data context: the selected entries for the plugin's own
+  actions, the revision numbers for Select in Git Log and Copy Revision Number, which are platform actions the
+  plugin only references.
+- The reset dialog is the plugin's own because git4idea's is built around a `VcsFullCommitDetails` loaded from the
+  Log, which is exactly what an unreachable commit does not have. The mode names and descriptions still come from
+  git4idea, so the choice reads the same as in the Log.
 - A ref that exists but was never logged is not an error for git - it answers with an empty reflog - while a ref
   that is gone is, so every read resolves the ref against the refs that currently have a reflog and falls back to
   `HEAD` rather than surface that error.
