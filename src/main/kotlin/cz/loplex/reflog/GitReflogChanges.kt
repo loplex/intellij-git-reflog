@@ -127,3 +127,46 @@ private fun isAncestor(repository: GitRepository, older: GitReflogEntry, newer: 
 
     return Git.getInstance().runCommand(handler).success()
 }
+
+/**
+ * Outcome of one reading of the file pane's changes.
+ */
+internal data class GitReflogChangesResult(
+    /**
+     * Mode the [changes] were read under, which is the one asked for only where it fitted the selection.
+     *
+     * Null where no mode fitted at all - a stash reflog with more than one entry selected being the honest case
+     * of it - and then [changes] is empty.
+     */
+    val mode: GitReflogDiffMode?,
+    /** What the read found out about the selection on the way, if it had to ask. */
+    val ancestry: GitReflogAncestry,
+    val changes: List<Change>,
+)
+
+/**
+ * Settles which mode fits [selection] and reads it. Blocking - call from a background thread.
+ *
+ * Ancestry is asked of git for every selection of more than one entry, not only for the one that ends up merging
+ * them. The answer decides more than what is read: it decides whether merging is *offered* at all, and a switch
+ * that offers it for entries git would refuse to merge is worse than one that greys it out.
+ *
+ * A single entry costs no git call, merging one commit with its parent needing nothing known about the graph -
+ * which is the common case, and the one that would otherwise cost a walk of the graph per arrow key.
+ *
+ * @throws VcsException when git fails
+ */
+@Throws(VcsException::class)
+internal fun readChangesFor(
+    project: Project,
+    repository: GitRepository,
+    selection: GitReflogSelection,
+    preferred: GitReflogDiffMode,
+): GitReflogChangesResult {
+    val ancestry =
+        if (selection.selected.size >= 2) readAncestry(repository, selection) else GitReflogAncestry.LINEAR
+    val mode = preferred.effectiveFor(selection, ancestry)
+    val changes = mode?.let { readReflogChanges(project, repository, selection, it) } ?: emptyList()
+
+    return GitReflogChangesResult(mode, ancestry, changes)
+}

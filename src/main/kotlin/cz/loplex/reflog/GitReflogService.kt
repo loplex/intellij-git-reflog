@@ -5,7 +5,6 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.VcsException
-import com.intellij.openapi.vcs.changes.Change
 import git4idea.repo.GitRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,22 +19,6 @@ internal data class GitReflogData(
     val refs: List<GitReflogRef>,
     val ref: GitReflogRef,
     val entries: List<GitReflogEntry>,
-)
-
-/**
- * Outcome of one reading of the file pane's changes.
- */
-internal data class GitReflogChangesResult(
-    /**
-     * Mode the [changes] were read under, which is the one asked for only where it fitted the selection.
-     *
-     * Null where no mode fitted at all - a stash reflog with more than one entry selected being the honest case
-     * of it - and then [changes] is empty.
-     */
-    val mode: GitReflogDiffMode?,
-    /** What the read found out about the selection on the way, if it had to ask. */
-    val ancestry: GitReflogAncestry,
-    val changes: List<Change>,
 )
 
 /**
@@ -93,7 +76,7 @@ internal class GitReflogService(private val project: Project, private val corout
 
         val result = withContext(Dispatchers.IO) {
             try {
-                Result.success(readChanges(repository, selection, preferred))
+                Result.success(readChangesFor(project, repository, selection, preferred))
             }
             catch (e: VcsException) {
                 Result.failure(e)
@@ -101,31 +84,6 @@ internal class GitReflogService(private val project: Project, private val corout
         }
 
         withContext(Dispatchers.EDT) { onFinished(result) }
-    }
-
-    /**
-     * Settles which mode fits [selection] and reads it.
-     *
-     * Ancestry is asked of git only once the answer can change the outcome - that is, once the modes have been
-     * weighed optimistically and the one that came out is the only one the answer bears on. Walking the graph
-     * for every move of the selection would cost a git call per arrow key for a reading most selections never
-     * end up on.
-     */
-    private fun readChanges(
-        repository: GitRepository,
-        selection: GitReflogSelection,
-        preferred: GitReflogDiffMode,
-    ): GitReflogChangesResult {
-        var ancestry = GitReflogAncestry.UNKNOWN
-        var mode = preferred.effectiveFor(selection, ancestry)
-
-        if (mode == GitReflogDiffMode.UNION && selection.selected.size >= 2) {
-            ancestry = readAncestry(repository, selection)
-            mode = preferred.effectiveFor(selection, ancestry)
-        }
-
-        val changes = mode?.let { readReflogChanges(project, repository, selection, it) } ?: emptyList()
-        return GitReflogChangesResult(mode, ancestry, changes)
     }
 
     private fun read(repository: GitRepository, ref: GitReflogRef, limit: Int): GitReflogData {

@@ -40,7 +40,7 @@ class GitReflogChangesTest : VcsPlatformTest() {
         // The .git directory was written behind the VFS's back, and the mapping is only believed once it is seen.
         VfsUtil.markDirtyAndRefresh(false, true, true, projectRoot)
 
-        vcsManager.directoryMappings = listOf(VcsDirectoryMapping(projectPath, GitVcs.NAME))
+        vcsManager.setDirectoryMappings(listOf(VcsDirectoryMapping(projectPath, GitVcs.NAME)))
         vcsManager.waitForInitialized()
 
         val repositories = GitRepositoryManager.getInstance(project)
@@ -120,6 +120,32 @@ class GitReflogChangesTest : VcsPlatformTest() {
         assertEquals(
             GitReflogAncestry.DIVERGED,
             readAncestry(repository, GitReflogSelection(GitReflogRef.HEAD, entries, listOf(master, feature))),
+        )
+    }
+
+    fun `test what is on offer is settled even when the chosen mode is not the one it bears on`() {
+        commit("a.txt", "one", "Add a")
+        git("checkout", "-q", "-b", "feature")
+        commit("b.txt", "two", "Add b on feature")
+        git("checkout", "-q", "master")
+        commit("c.txt", "three", "Add c on master")
+
+        val entries = reflog()
+        val diverged = GitReflogSelection(
+            GitReflogRef.HEAD,
+            entries,
+            listOf(entries.first { it.subject == "Add c on master" }, entries.first { it.subject == "Add b on feature" }),
+        )
+
+        // Reflog Step fits this selection, so nothing forces the graph to be walked for the reading's own sake -
+        // but the switch still has to know that merging the two is not on offer, so it is walked anyway.
+        val outcome = readChangesFor(project, repository, diverged, GitReflogDiffMode.REFLOG_STEP)
+
+        assertEquals(GitReflogDiffMode.REFLOG_STEP, outcome.mode)
+        assertEquals(GitReflogAncestry.DIVERGED, outcome.ancestry)
+        assertFalse(
+            "Merging diverged entries was left on offer",
+            GitReflogDiffMode.UNION.isApplicableTo(diverged, outcome.ancestry),
         )
     }
 
