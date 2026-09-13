@@ -73,7 +73,13 @@ Two filters narrow what the table shows, and they combine:
   stash - leaves the filter disabled.
 
 Both run over the entries already read, which is what makes them instant. Whenever the table shows fewer entries
-than were read, the count next to the filter field says so.
+than were read, the count at the end of the toolbar says so.
+
+The filters are drawn by the platform's `FilterComponent`, which is what the Log's Branch, User and Date filters
+are built on, so the same filter looks the same in both tabs: the name in front of the value, the value
+highlighted once something is picked, and a reset button next to it. The ref counts as unset while it is `HEAD`,
+which is where the tab starts and what it falls back to; the repository never counts as set, because picking one
+narrows nothing - it says which reflog is being looked at.
 
 ### Actions on the selected entry
 
@@ -120,6 +126,9 @@ says nothing about the new one.
 - Every action acts on what the tab publishes into the data context: the selected entries for the plugin's own
   actions, the revision numbers for Select in Git Log and Copy Revision Number, which are platform actions the
   plugin only references.
+- The filters are `FilterComponent` subclasses added to the toolbar row directly. The Log's own wrapper for
+  putting one in a toolbar, `VcsLogPopupComponentAction`, is marked internal, so the plugin opens the popup
+  itself - as an action group updated off the EDT, with speed search, which is what the Log does too.
 - The reset dialog is the plugin's own because git4idea's is built around a `VcsFullCommitDetails` loaded from the
   Log, which is exactly what an unreachable commit does not have. The mode names and descriptions still come from
   git4idea, so the choice reads the same as in the Log.

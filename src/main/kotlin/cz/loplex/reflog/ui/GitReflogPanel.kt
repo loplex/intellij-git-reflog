@@ -7,12 +7,10 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.KeepPopupOnPerform
 import com.intellij.openapi.actionSystem.ToggleAction
-import com.intellij.openapi.actionSystem.ex.ComboBoxAction
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.project.DumbAware
@@ -61,6 +59,10 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     private val table = TableView(tableModel)
     private val searchField = SearchTextField(false)
     private val countLabel = JBLabel()
+    private val repositoryFilter = RepositoryFilter()
+    private val refFilter = RefFilter()
+    private val actionKindFilter = ActionKindFilter()
+    private val filters = listOf(repositoryFilter, refFilter, actionKindFilter)
     private var loadJob: Job? = null
     private var disposed = false
 
@@ -144,6 +146,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     /** Re-reads the reflog of the selected repository, dropping a read that is still running. */
     fun reload() {
         loadJob?.cancel()
+        updateFilters()
 
         val repository = repository
         if (repository == null) {
@@ -180,6 +183,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         tableModel.items = ArrayList()
         table.emptyText.text = text
         countLabel.text = ""
+        updateFilters()
     }
 
     private fun setFilter(filter: GitReflogFilter) {
@@ -205,6 +209,8 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             shown.size != entries.size -> GitReflogBundle.message("reflog.count.filtered", shown.size, entries.size)
             else -> ""
         }
+
+        updateFilters()
     }
 
     private fun restoreSelection(identities: Set<Any>) {
@@ -219,27 +225,54 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
 
     private fun repositories(): List<GitRepository> = GitRepositoryManager.getInstance(project).repositories
 
+    /**
+     * Laid out the way the Log lays its own out: the text field first, the filters after it, and the actions at
+     * the far end of the row.
+     */
     private fun createToolbar(): JComponent {
-        val group = DefaultActionGroup(
-            RepositorySelector(),
-            RefSelector(),
-            ActionKindFilter(),
-            ActionManager.getInstance().getAction(TOOLBAR_GROUP_ID),
+        val actions = ActionManager.getInstance().createActionToolbar(
+            TOOLBAR_PLACE,
+            DefaultActionGroup(ActionManager.getInstance().getAction(TOOLBAR_GROUP_ID)),
+            true,
         )
-        val toolbar = ActionManager.getInstance().createActionToolbar(TOOLBAR_PLACE, group, true)
-        toolbar.targetComponent = this
+        actions.targetComponent = this
 
-        val filters = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), JBUI.scale(2))).apply {
+        val left = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), JBUI.scale(2))).apply {
+            isOpaque = false
+            add(searchField)
+            filters.forEach { add(it.initUi()) }
+        }
+        val right = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), JBUI.scale(2))).apply {
             isOpaque = false
             add(countLabel)
-            add(searchField)
+            add(actions.component)
         }
         return JPanel(BorderLayout()).apply {
             isOpaque = false
-            add(toolbar.component, BorderLayout.WEST)
-            add(filters, BorderLayout.EAST)
+            add(left, BorderLayout.WEST)
+            add(right, BorderLayout.EAST)
         }
     }
+
+    /**
+     * Brings the filter components up to date with what the tab now holds.
+     *
+     * They draw themselves out of the panel's state rather than keeping a copy of it, so every change of that
+     * state has to tell them to redraw.
+     */
+    private fun updateFilters() {
+        repositoryFilter.isVisible = repositories().size > 1
+        refFilter.isEnabled = repository != null
+        actionKindFilter.isEnabled = actionKinds().isNotEmpty()
+        filters.forEach { it.filterChanged() }
+    }
+
+    /**
+     * Kinds present in the entries at hand. Stash entries carry no action at all, which is why the empty kind is
+     * dropped rather than offered as a nameless item.
+     */
+    private fun actionKinds(): List<String> =
+        entries.mapNotNullTo(sortedSetOf()) { it.actionKind.ifEmpty { null } }.toList()
 
     private fun setUpSearchField() {
         searchField.textEditor.columns = SEARCH_FIELD_COLUMNS
@@ -302,36 +335,42 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         loadJob?.cancel()
     }
 
-    /** Lets the user pick the repository; hidden unless the project holds more than one. */
-    private inner class RepositorySelector : ComboBoxAction(), DumbAware {
+    /**
+     * Shows which repository the tab reads, and lets it be switched. Hidden unless the project holds more than
+     * one, and never marked as a set filter: it narrows nothing, it only says what is being looked at.
+     */
+    private inner class RepositoryFilter :
+        GitReflogFilterComponent(GitReflogBundle.lazyMessage("reflog.filter.repository.name")) {
 
-        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+        override fun getCurrentText(): String =
+            repository?.let { DvcsUtil.getShortRepositoryName(it) } ?: emptyFilterValue
 
-        override fun update(e: AnActionEvent) {
-            e.presentation.isEnabledAndVisible = repositories().size > 1
-            e.presentation.text = repository?.let { DvcsUtil.getShortRepositoryName(it) }
-        }
+        override fun getEmptyFilterValue(): String = GitReflogBundle.message("reflog.filter.repository.none")
 
-        override fun createPopupActionGroup(button: JComponent, dataContext: DataContext): DefaultActionGroup {
-            val group = DefaultActionGroup()
-            repositories().forEach { repository ->
-                group.add(DumbAwareAction.create(DvcsUtil.getShortRepositoryName(repository)) { selectRepository(repository) })
-            }
-            return group
-        }
+        override fun isValueSelected(): Boolean = false
+
+        override fun createResetAction(): Runnable = Runnable { }
+
+        override fun createActionGroup(): ActionGroup = DefaultActionGroup(
+            repositories().map { repository ->
+                DumbAwareAction.create(DvcsUtil.getShortRepositoryName(repository)) { selectRepository(repository) }
+            },
+        )
     }
 
     /** Lets the user pick any ref the repository holds a reflog for, grouped by what kind of ref it is. */
-    private inner class RefSelector : ComboBoxAction(), DumbAware {
+    private inner class RefFilter : GitReflogFilterComponent(GitReflogBundle.lazyMessage("reflog.filter.ref.name")) {
 
-        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+        override fun getCurrentText(): String = ref.presentableName
 
-        override fun update(e: AnActionEvent) {
-            e.presentation.isEnabled = repository != null
-            e.presentation.text = ref.presentableName
-        }
+        override fun getEmptyFilterValue(): String = GitReflogRef.HEAD.presentableName
 
-        override fun createPopupActionGroup(button: JComponent, dataContext: DataContext): DefaultActionGroup {
+        /** HEAD is where the tab starts and what it falls back to, so it reads as the unset value. */
+        override fun isValueSelected(): Boolean = ref != GitReflogRef.HEAD
+
+        override fun createResetAction(): Runnable = Runnable { selectRef(GitReflogRef.HEAD) }
+
+        override fun createActionGroup(): ActionGroup {
             val group = DefaultActionGroup()
             var previousKind: GitReflogRef.Kind? = null
             refs.forEach { ref ->
@@ -355,21 +394,25 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      * Narrows the table to chosen kinds of operation. The kinds offered are the ones present in the entries at
      * hand, so the popup never lists an operation this reflog does not contain.
      */
-    private inner class ActionKindFilter : ComboBoxAction(), DumbAware {
+    private inner class ActionKindFilter :
+        GitReflogFilterComponent(GitReflogBundle.lazyMessage("reflog.filter.action.name")) {
 
-        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
-
-        override fun update(e: AnActionEvent) {
+        override fun getCurrentText(): String {
             val chosen = filter.actionKinds
-            e.presentation.isEnabled = actionKinds().isNotEmpty()
-            e.presentation.text = when {
-                chosen.isEmpty() -> GitReflogBundle.message("reflog.filter.action.all")
+            return when {
+                chosen.isEmpty() -> emptyFilterValue
                 chosen.size == 1 -> chosen.first()
                 else -> GitReflogBundle.message("reflog.filter.action.several", chosen.size)
             }
         }
 
-        override fun createPopupActionGroup(button: JComponent, dataContext: DataContext): DefaultActionGroup {
+        override fun getEmptyFilterValue(): String = GitReflogBundle.message("reflog.filter.action.all")
+
+        override fun isValueSelected(): Boolean = filter.actionKinds.isNotEmpty()
+
+        override fun createResetAction(): Runnable = Runnable { setFilter(filter.copy(actionKinds = emptySet())) }
+
+        override fun createActionGroup(): ActionGroup {
             val group = DefaultActionGroup()
             group.add(DumbAwareAction.create(GitReflogBundle.message("reflog.filter.action.all")) {
                 setFilter(filter.copy(actionKinds = emptySet()))
@@ -378,13 +421,6 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             actionKinds().forEach { kind -> group.add(ActionKindToggle(kind)) }
             return group
         }
-
-        /**
-         * Kinds present in the entries at hand. Stash entries carry no action at all, which is why the empty kind
-         * is dropped rather than offered as a nameless item.
-         */
-        private fun actionKinds(): List<String> =
-            entries.mapNotNullTo(sortedSetOf()) { it.actionKind.ifEmpty { null } }.toList()
     }
 
     /** One checkbox of the action kind popup; the popup stays open so that several kinds can be picked at once. */
