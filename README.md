@@ -89,8 +89,12 @@ that a comparison that exists can still be seen to exist.
 Reading the files is held back 150 ms after the selection moves, so walking the table with the arrow keys does
 not start a git call per row passed over. A selection that comes back to the same entries under the same
 comparison - which is what every re-read does, by restoring the selection it had - is left alone rather than
-read again: what a commit changed cannot change. **Against Working Tree** is the exception, being the one
-reading whose answer can change without the reflog changing.
+read again: what a commit changed cannot change.
+
+**Against Working Tree** is the exception, being the one reading whose answer can change without the reflog
+changing at all. It is read again every time the pane is asked to, and the tab listens to the change lists on top
+of the repository, so that an edit which is merely saved - touching no git state for a repository listener to
+hear about - still reaches it.
 
 Whether the selected entries sit on one line of history takes a `git merge-base --is-ancestor` per neighbouring
 pair to answer, so it is asked only once the answer can change which comparison is shown - never on the way past

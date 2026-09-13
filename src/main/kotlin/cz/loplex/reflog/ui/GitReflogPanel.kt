@@ -20,6 +20,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vcs.VcsDataKeys
+import com.intellij.openapi.vcs.changes.ChangeListListener
+import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.PopupHandler
@@ -182,7 +184,13 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         changesPanel.showEmptyText(GitReflogBundle.message("reflog.changes.none.selected"))
 
         subscribeToRepositoryChanges()
-        selectRepository(GitBranchUtil.getCurrentRepository(project) ?: repositories().firstOrNull())
+        subscribeToWorkingTreeChanges()
+        // The repository a widget would show: the one holding the file being looked at, or, failing that, the one
+        // git was last used on. Which is the right guess for a tab as well - it is opened on the work in hand.
+        selectRepository(
+            GitBranchUtil.guessWidgetRepository(project, DvcsUtil.getSelectedFile(project))
+                ?: repositories().firstOrNull(),
+        )
     }
 
     /**
@@ -482,6 +490,36 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         }
         project.messageBus.connect(this).subscribe(GitRepository.GIT_REPO_CHANGE, listener)
     }
+
+    /**
+     * Comparing against the working tree is the one reading whose answer can change without the reflog changing,
+     * and an edit that is only saved changes no git state for [subscribeToRepositoryChanges] to hear about.
+     *
+     * [ChangeListManager] is what does hear about it, and it has finished working out what changed by the time it
+     * says so - which is the point at which the pane is worth reading again.
+     */
+    private fun subscribeToWorkingTreeChanges() {
+        val listener = object : ChangeListListener {
+            override fun changeListUpdateDone() {
+                // Published off the EDT; the panel state is only touched on it.
+                ApplicationManager.getApplication().invokeLater(
+                    { if (isShowingWorkingTree()) changesAlarm.cancelAndRequest() },
+                    ModalityState.any(),
+                    { disposed },
+                )
+            }
+        }
+        project.messageBus.connect(this).subscribe(ChangeListListener.TOPIC, listener)
+    }
+
+    /**
+     * Whether the file pane is showing the working tree, which is what makes a change to it worth reading.
+     *
+     * Asked of the mode rather than of the selection, so that the one rule saying when the working tree can be
+     * compared at all stays in the one place that states it.
+     */
+    private fun isShowingWorkingTree(): Boolean =
+        diffMode == GitReflogDiffMode.WORKING_TREE && diffMode.isApplicableTo(selection(), ancestry)
 
     override fun uiDataSnapshot(sink: DataSink) {
         super.uiDataSnapshot(sink)
