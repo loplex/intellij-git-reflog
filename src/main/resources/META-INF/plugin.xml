@@ -57,6 +57,16 @@
                     class="cz.loplex.reflog.actions.GitReflogLoadMoreAction"/>
         </group>
 
+        <!-- Toolbar and context menu of the file pane. Show Diff and Group By come from the platform's browser
+             itself; these are what the Log adds on top of them. -->
+        <group id="GitReflog.ChangesBrowser.Toolbar">
+            <reference ref="Vcs.RepositoryChangesBrowserToolbar"/>
+        </group>
+
+        <group id="GitReflog.ChangesBrowser.Popup">
+            <reference ref="Vcs.RepositoryChangesBrowserMenu"/>
+        </group>
+
         <group id="GitReflog.ContextMenu">
             <action id="GitReflog.ShowDiff"
                     class="cz.loplex.reflog.actions.GitReflogShowDiffAction"

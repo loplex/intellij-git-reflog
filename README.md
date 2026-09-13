@@ -74,6 +74,10 @@ With no diff pane the viewer is not merely hidden but disposed, since it would o
 contents behind every move of the selection. The file pane stays either way: it is what says which files an entry
 touched, and it costs the same one `git show` regardless.
 
+The file pane carries the toolbar the Log's own file pane carries - Show Diff, Revert, Show History for Revision
+and Group By - and the platform's repository menu on right click: Show Diff with Local, Open Repository Version,
+Revert, Create Patch, Get Version, Show History for Revision.
+
 Where the diff pane sits is remembered outside the project, so the tab opens the way it was last left in any
 project, and so are the positions of the two splitters.
 
@@ -167,6 +171,10 @@ says nothing about the new one.
   actions, the revision numbers for Select in Git Log and Copy Revision Number, which are platform actions the
   plugin only references, and whether a page was left unread for Load More. Publishing that last one rather than
   reading it off the panel is what lets every action update off the EDT.
+- The file pane's toolbar and menu add the platform's `Vcs.RepositoryChangesBrowserToolbar` and
+  `Vcs.RepositoryChangesBrowserMenu` groups to what `ChangesBrowserBase` already brings. Where the Log keeps the
+  placement of its diff pane in a View Options popup on that same toolbar, the tab keeps it as two buttons on its
+  own toolbar instead, next to Refresh.
 - The file and diff panes are the platform's `SimpleAsyncChangesBrowser` and the viewer that
   `TreeHandlerEditorDiffPreview.createDefaultViewer` builds on top of its tree. The Log's own equivalents,
   `VcsLogChangesBrowser` and its `FrameDiffPreview`, are internal to the Log, but they are built out of exactly

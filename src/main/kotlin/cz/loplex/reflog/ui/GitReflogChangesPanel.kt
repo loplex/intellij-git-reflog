@@ -7,7 +7,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ui.DefaultChangesTreeDiffPreviewHandler
-import com.intellij.openapi.vcs.changes.ui.SimpleAsyncChangesBrowser
 import com.intellij.openapi.vcs.changes.ui.TreeHandlerEditorDiffPreview
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -24,7 +23,7 @@ import javax.swing.JComponent
  */
 internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent) : BorderLayoutPanel(), Disposable {
 
-    private val browser = SimpleAsyncChangesBrowser(project, false, false)
+    private val browser = GitReflogChangesBrowser(project)
     private val filesSplitter = OnePixelSplitter(false, FILES_SPLITTER_PROPORTION, 0.6f)
     private val diffSplitter = OnePixelSplitter(true, DIFF_SPLITTER_PROPORTION, 0.6f)
 

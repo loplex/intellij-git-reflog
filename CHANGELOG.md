@@ -16,5 +16,7 @@
   the diff of the file selected among them.
 - Preview Diff on the Right and Preview Diff at the Bottom on the toolbar, the platform's pair of preview
   buttons: they place the diff pane, and hide it when neither is pressed.
+- The file pane's own toolbar and menu, as in the Log: Show Diff, Group By, Revert, Show History for Revision,
+  and the platform's repository menu on right click.
 - Show Diff, Select in Git Log and Copy Revision Number on the selected entry.
 - Checkout Revision, New Branch from Here and Reset Current Branch to Here on the selected entry.
