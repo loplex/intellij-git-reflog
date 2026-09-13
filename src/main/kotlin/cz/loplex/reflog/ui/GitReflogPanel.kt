@@ -17,7 +17,9 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vcs.VcsDataKeys
+import com.intellij.openapi.vcs.changes.Change
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.PopupHandler
@@ -57,6 +59,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
 
     private val tableModel = GitReflogTableModel()
     private val table = TableView(tableModel)
+    private val changesPanel = GitReflogChangesPanel(project, ScrollPaneFactory.createScrollPane(table, true))
     private val searchField = SearchTextField(false)
     private val countLabel = JBLabel()
     private val repositoryFilter = RepositoryFilter()
@@ -64,6 +67,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     private val actionKindFilter = ActionKindFilter()
     private val filters = listOf(repositoryFilter, refFilter, actionKindFilter)
     private var loadJob: Job? = null
+    private var changesJob: Job? = null
     private var disposed = false
 
     /**
@@ -76,6 +80,15 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      */
     private val reloadAlarm = SingleAlarm.singleEdtAlarm(REPOSITORY_CHANGE_DELAY_MS, this, Runnable { reload() })
 
+    /**
+     * Holds the changes pane back while the selection is still moving. Every entry costs a `git show`, and
+     * walking the table with the arrow keys would otherwise start one per row passed over.
+     *
+     * Postponed rather than throttled, unlike [reloadAlarm]: what matters here is the row the user stops on, not
+     * the one they started from.
+     */
+    private val changesAlarm = SingleAlarm.singleEdtAlarm(SELECTION_CHANGE_DELAY_MS, this, Runnable { loadChanges() })
+
     /** Everything the last read returned; the table shows what passes [filter]. */
     private var entries: List<GitReflogEntry> = emptyList()
     private var filter = GitReflogFilter()
@@ -85,6 +98,15 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
 
     /** How many records the next read asks git for; raised a page at a time by [loadMore]. */
     private var limit = GitReflogReader.PAGE_SIZE
+
+    /**
+     * Commit whose changes the file pane currently shows, if any.
+     *
+     * What a commit changed cannot change, so a selection that comes back to the same commit - which is what
+     * every auto-refresh does, by restoring the selection it had - is left alone instead of being re-read and
+     * redrawn under the user.
+     */
+    private var shownChangesFor: String? = null
 
     /** Repository whose reflog is currently shown. */
     var repository: GitRepository? = null
@@ -106,10 +128,13 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         tableModel.applyColumnWidths(table)
         setUpSearchField()
 
-        setContent(ScrollPaneFactory.createScrollPane(table, true))
+        Disposer.register(this, changesPanel)
+        setContent(changesPanel)
         toolbar = createToolbar()
         installContextMenu()
         installDoubleClickHandler()
+        installSelectionHandler()
+        changesPanel.showEmptyText(GitReflogBundle.message("reflog.changes.none.selected"))
 
         subscribeToRepositoryChanges()
         selectRepository(GitBranchUtil.getCurrentRepository(project) ?: repositories().firstOrNull())
@@ -301,6 +326,64 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         }.installOn(table)
     }
 
+    /** Keeps the file pane on the entry the table is standing on, the way the Log follows its own graph. */
+    private fun installSelectionHandler() {
+        table.selectionModel.addListSelectionListener { event ->
+            if (!event.valueIsAdjusting) changesAlarm.cancelAndRequest()
+        }
+    }
+
+    /**
+     * Reads the changes of the selected entry into the file pane.
+     *
+     * Only a single entry is answered: two reflog entries need not stand on the same branch at all, which leaves
+     * nothing a diff between them could mean.
+     */
+    private fun loadChanges() {
+        val repository = repository
+        val selected = table.selectedObjects
+
+        if (repository == null || selected.size != 1) {
+            val text = when {
+                selected.size > 1 -> GitReflogBundle.message("reflog.changes.one.only")
+                else -> GitReflogBundle.message("reflog.changes.none.selected")
+            }
+            showChangesEmptyText(text)
+            return
+        }
+
+        val entry = selected.single()
+        if (entry.hash == shownChangesFor) return
+
+        changesJob?.cancel()
+        shownChangesFor = entry.hash
+        changesJob = GitReflogService.getInstance(project).loadChanges(
+            repository,
+            entry,
+            onStarted = { changesPanel.showEmptyText(GitReflogBundle.message("reflog.changes.loading")) },
+            onFinished = { result -> showChanges(entry, result) },
+        )
+    }
+
+    private fun showChanges(entry: GitReflogEntry, result: Result<List<Change>>) {
+        result
+            .onSuccess { changes ->
+                changesPanel.setChanges(changes, GitReflogBundle.message("reflog.changes.empty", entry.shortHash))
+            }
+            .onFailure { error ->
+                shownChangesFor = null
+                changesPanel.showEmptyText(
+                    GitReflogBundle.message("reflog.changes.error", error.message.orEmpty()),
+                )
+            }
+    }
+
+    private fun showChangesEmptyText(text: String) {
+        changesJob?.cancel()
+        shownChangesFor = null
+        changesPanel.showEmptyText(text)
+    }
+
     /**
      * The reflog is written by every commit, checkout, reset or rebase, and each of those also changes the state
      * of the repository - which makes [GitRepository.GIT_REPO_CHANGE] a good enough signal to keep the tab current.
@@ -334,6 +417,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     override fun dispose() {
         disposed = true
         loadJob?.cancel()
+        changesJob?.cancel()
     }
 
     /**
@@ -455,5 +539,6 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         private const val CONTEXT_MENU_GROUP_ID = "GitReflog.ContextMenu"
         private const val SEARCH_FIELD_COLUMNS = 16
         private const val REPOSITORY_CHANGE_DELAY_MS = 300
+        private const val SELECTION_CHANGE_DELAY_MS = 150
     }
 }

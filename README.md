@@ -47,6 +47,27 @@ per step while each read costs a `rev-parse`, a walk of the log directory and a 
 change of a burst schedules the read and the rest fold into it, so a long-running operation still refreshes while
 it runs rather than only at its end.
 
+### The files of the selected entry, and their diff
+
+Below and beside the table sit the same two panes the Log has: the files the selected entry's commit changed,
+and the diff of the file selected among them. The files pane sits next to the table, the diff spans the width of
+both - the arrangement the Log uses, for the same reason: a diff is read across, so it takes the width of the
+whole tab rather than the half a side-by-side split would leave it.
+
+The files are read with `git show`, so they are there for a commit no ref reaches any more - the same reason
+Show Diff works where Select in Git Log does not.
+
+Only a single selected entry has files to show. Two reflog entries need not stand on the same branch at all,
+which leaves nothing a diff between them could mean.
+
+Reading the files is held back 150 ms after the selection moves, so walking the table with the arrow keys does
+not start a `git show` per row passed over. A selection that comes back to the same commit - which is what every
+re-read does, by restoring the selection it had - is left alone rather than read again: what a commit changed
+cannot change.
+
+The positions of the two splitters are remembered outside the project, so the tab opens the way it was last left
+in any project.
+
 ### Which refs can be shown
 
 Every ref the repository actually holds a reflog for, grouped in the selector by what kind of ref it is: `HEAD`,
@@ -137,6 +158,12 @@ says nothing about the new one.
   actions, the revision numbers for Select in Git Log and Copy Revision Number, which are platform actions the
   plugin only references, and whether a page was left unread for Load More. Publishing that last one rather than
   reading it off the panel is what lets every action update off the EDT.
+- The file and diff panes are the platform's `SimpleAsyncChangesBrowser` and the viewer that
+  `TreeHandlerEditorDiffPreview.createDefaultViewer` builds on top of its tree. The Log's own equivalents,
+  `VcsLogChangesBrowser` and its `FrameDiffPreview`, are internal to the Log, but they are built out of exactly
+  these two pieces, which is why the panes behave the same - including the Combined Diff viewer when it is
+  enabled. The diff viewer is registered under a place of the plugin's own, so the settings its toolbar writes
+  belong to this tab rather than following the Log.
 - The filters are `FilterComponent` subclasses added to the toolbar row directly. The Log's own wrapper for
   putting one in a toolbar, `VcsLogPopupComponentAction`, is marked internal, so the plugin opens the popup
   itself - as an action group updated off the EDT, with speed search, which is what the Log does too.

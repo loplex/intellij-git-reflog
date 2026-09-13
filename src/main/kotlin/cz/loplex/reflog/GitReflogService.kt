@@ -5,6 +5,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.VcsException
+import com.intellij.openapi.vcs.changes.Change
 import git4idea.repo.GitRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,10 +23,10 @@ internal data class GitReflogData(
 )
 
 /**
- * Runs reflog reads off the EDT and hands the outcome back on it.
+ * Runs the git reads the tab needs off the EDT and hands their outcome back on it.
  */
 @Service(Service.Level.PROJECT)
-internal class GitReflogService(private val coroutineScope: CoroutineScope) {
+internal class GitReflogService(private val project: Project, private val coroutineScope: CoroutineScope) {
 
     /**
      * Reads the refs of [repository] that have a reflog, and the newest [limit] entries of [ref], in the
@@ -46,6 +47,33 @@ internal class GitReflogService(private val coroutineScope: CoroutineScope) {
         val result = withContext(Dispatchers.IO) {
             try {
                 Result.success(read(repository, ref, limit))
+            }
+            catch (e: VcsException) {
+                Result.failure(e)
+            }
+        }
+
+        withContext(Dispatchers.EDT) { onFinished(result) }
+    }
+
+    /**
+     * Reads the changes of the commit [entry] points at, in the background.
+     *
+     * Shaped like [loadReflog] - both callbacks on the EDT, neither of them run once the returned job is
+     * cancelled - because the panel treats the two reads the same way: a new selection drops the read the
+     * previous one started.
+     */
+    fun loadChanges(
+        repository: GitRepository,
+        entry: GitReflogEntry,
+        onStarted: () -> Unit,
+        onFinished: (Result<List<Change>>) -> Unit,
+    ): Job = coroutineScope.launch {
+        withContext(Dispatchers.EDT) { onStarted() }
+
+        val result = withContext(Dispatchers.IO) {
+            try {
+                Result.success(readReflogEntryChanges(project, repository, entry))
             }
             catch (e: VcsException) {
                 Result.failure(e)

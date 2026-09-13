@@ -12,5 +12,7 @@
 - Filtering by text and by kind of operation, drawn with the platform's `FilterComponent` so that the toolbar
   matches the Log tab's.
 - Load More, which reads another page of older records once a read comes back full.
+- File and diff panes beside the table, as in the Log: the files the selected entry's commit changed, and
+  the diff of the file selected among them.
 - Show Diff, Select in Git Log and Copy Revision Number on the selected entry.
 - Checkout Revision, New Branch from Here and Reset Current Branch to Here on the selected entry.

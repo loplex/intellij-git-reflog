@@ -8,7 +8,7 @@ import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.actions.diff.ShowDiffAction
 import cz.loplex.reflog.GitReflogBundle
 import cz.loplex.reflog.GitReflogEntry
-import git4idea.changes.GitChangeUtils
+import cz.loplex.reflog.readReflogEntryChanges
 import git4idea.repo.GitRepository
 
 /**
@@ -36,11 +36,7 @@ internal fun showReflogEntryDiff(project: Project, repository: GitRepository, en
         private var changes: List<Change> = emptyList()
 
         override fun run(indicator: ProgressIndicator) {
-            // skipDiffsForMerge=true keeps a merge commit comparable against its first parent instead of failing.
-            changes = GitChangeUtils
-                .getRevisionChanges(project, repository.root, entry.hash, true, false, false)
-                .changes
-                .toList()
+            changes = readReflogEntryChanges(project, repository, entry)
         }
 
         override fun onSuccess() {
