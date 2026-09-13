@@ -21,6 +21,12 @@ internal data class GitReflogEntry(
 ) {
     val shortHash: @NlsSafe String get() = hash.take(SHORT_HASH_LENGTH)
 
+    /**
+     * First word of [action], which is what a reader thinks of as the kind of the operation: `merge feature` and
+     * `commit (amend)` belong with the other merges and commits rather than forming kinds of their own.
+     */
+    val actionKind: @NlsSafe String get() = action.substringBefore(' ')
+
     val revisionNumber: GitRevisionNumber get() = GitRevisionNumber(hash, Date(timestamp))
 
     private companion object {

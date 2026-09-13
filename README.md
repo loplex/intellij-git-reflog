@@ -23,14 +23,27 @@ The tab lists the reflog of one ref of one repository, newest entry first:
 | Description | the rest of the reflog message, for example `moving from master to feature`               |
 | Commit      | short hash of the commit `HEAD` pointed at afterwards                                     |
 
-The toolbar holds a ref selector - `HEAD` or any local branch - Refresh, and, in projects with more than one Git
-repository, a repository selector.
+The toolbar holds a ref selector - `HEAD` or any local branch - the action filter, Refresh, and, in projects with
+more than one Git repository, a repository selector. The filter field sits at the right end of the same row.
 Switching the repository resets the ref to `HEAD`, and so does selecting a branch that has been deleted meanwhile;
 git answers a reflog request for a ref that is gone with a fatal error, while a branch that merely was never logged
 comes back as an empty reflog.
 
 The tab also re-reads the reflog on its own whenever the state of the repository changes, which covers every
 operation that writes a reflog record.
+
+### Filtering
+
+Two filters narrow what the table shows, and they combine:
+
+- **the filter field** - matched against the description, the action and the selector, and against the beginning
+  of the hash, so a pasted hash prefix finds its entry;
+- **the action filter** - a list of checkboxes over the kinds of operation. The kinds are collected from the
+  entries at hand, so the list never offers an operation this reflog does not contain, and `commit (amend)` is
+  offered under `commit` rather than as a kind of its own.
+
+Both run over the entries already read, which is what makes them instant. Whenever the table shows fewer entries
+than were read, the count next to the filter field says so.
 
 ### Actions on the selected entry
 
@@ -45,7 +58,9 @@ there. Show Diff reads the commit directly and works for those as well - which i
 
 ### Caveat: one read returns at most 1000 entries
 
-Reflogs of long-lived repositories can hold tens of thousands of records, and the tab reads the newest 1000 of them.
+Reflogs of long-lived repositories can hold tens of thousands of records, and the tab reads the newest 1000 of
+them. Since the filters run over what was read, an entry older than that is not found by filtering either - the
+count next to the filter field says when the cap is in play.
 
 ## How the tab is wired in
 
@@ -56,6 +71,8 @@ Reflogs of long-lived repositories can hold tens of thousands of records, and th
   placeholder and the `HEAD@{n}` index from the record position.
 - Show Diff, Select in Git Log and Copy Revision Number act on the revision numbers the tab publishes into the data
   context; the latter two are platform actions that the plugin only references.
+- A ref that exists but was never logged is not an error for git - it answers with an empty reflog - while a ref
+  that is gone is, so the tab falls back to `HEAD` before asking for a branch that has been deleted meanwhile.
 
 ## Plugin structure
 
