@@ -83,7 +83,8 @@ The choice is remembered outside the project, so the tab opens the way it was la
 answer for the selection of the moment gives way to the nearest one that does, rather than emptying the pane -
 and comes back as soon as a selection it suits is made again. What the toolbar and the ticks in the menu show is
 always the comparison on screen, so a selection being answered by a different one is never silent. Both the
-toolbar and the context menu list every comparison and grey out the ones the selection has no answer for: a set
+toolbar and the context menus - the table's as well as the file pane's, the entries being selected in the table -
+list every comparison and grey out the ones the selection has no answer for: a set
 that changed with the selection could not be learnt, and a comparison that is merely absent leaves nothing to
 explain itself, where a greyed one says that it exists and that this selection is not for it.
 

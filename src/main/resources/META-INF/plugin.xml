@@ -81,6 +81,9 @@
                     class="cz.loplex.reflog.actions.GitReflogShowDiffAction"
                     icon="AllIcons.Actions.Diff"
                     use-shortcut-of="Diff.ShowDiff"/>
+            <!-- Also here, not only on the file pane: the entries being compared are selected in this table, so
+                 this is where the question is asked. -->
+            <reference ref="GitReflog.DiffModes"/>
             <separator/>
             <action id="GitReflog.CheckoutRevision"
                     class="cz.loplex.reflog.actions.GitReflogCheckoutRevisionAction"/>

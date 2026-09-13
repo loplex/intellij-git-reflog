@@ -33,6 +33,10 @@ class GitReflogFilePaneTest : BasePlatformTestCase() {
 
         val popup = idsOf(ActionManager.getInstance().getAction("GitReflog.ChangesBrowser.Popup"))
         assertTrue("Compare is not on the file pane's context menu: $popup", "GitReflog.DiffModes" in popup)
+
+        // The entries are selected in the table, so that is where the question is asked as often as not.
+        val table = idsOf(ActionManager.getInstance().getAction("GitReflog.ContextMenu"))
+        assertTrue("Compare is not on the table's context menu: $table", "GitReflog.DiffModes" in table)
     }
 
     /** What is on screen below the table is placed from the tab's toolbar, next to Refresh. */
