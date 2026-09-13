@@ -26,11 +26,6 @@ internal object GitReflogReader {
      */
     private const val PRETTY_FORMAT = "%H%x01%gd%x01%gs%x01%an%x01%s"
 
-    /** Number of fields [PRETTY_FORMAT] produces; the last one is the commit subject. */
-    private const val FIELD_COUNT = 5
-    private const val FIELD_SEPARATOR = '\u0001'
-    private const val SELECTOR_SEPARATOR = "@{"
-
     /**
      * How many records a read asks for to begin with, and how many more each Load More adds. Reflogs of
      * long-lived repositories hold tens of thousands of records, which is why none of them is read eagerly.
@@ -63,7 +58,7 @@ internal object GitReflogReader {
         val result = Git.getInstance().runCommand(handler)
         if (!result.success()) throw VcsException(result.errorOutputAsJoinedString)
 
-        return result.output.mapIndexedNotNull { index, line -> parseEntry(index, line, ref) }
+        return result.output.mapIndexedNotNull { index, line -> GitReflogParser.parse(index, line, ref) }
     }
 
     /**
@@ -81,6 +76,17 @@ internal object GitReflogReader {
     @Throws(VcsException::class)
     fun listRefs(repository: GitRepository): List<GitReflogRef> {
         val (gitDirectory, commonDirectory) = logDirectories(repository)
+        return refsIn(gitDirectory, commonDirectory)
+    }
+
+    /**
+     * The refs logged under the given directories, in the order the selector offers them.
+     *
+     * [gitDirectory] is where `logs/HEAD` lives and [commonDirectory] where `logs/refs` does. They are the same
+     * directory in an ordinary repository and differ inside a linked worktree, which keeps a HEAD reflog of its
+     * own while sharing the ref reflogs with the repository it was created from.
+     */
+    fun refsIn(gitDirectory: File, commonDirectory: File): List<GitReflogRef> {
         val refs = mutableListOf<GitReflogRef>()
 
         if (File(gitDirectory, "$LOGS_DIRECTORY/${GitReflogRef.HEAD.name}").isFile) refs.add(GitReflogRef.HEAD)
@@ -95,12 +101,7 @@ internal object GitReflogReader {
         return refs.sortedWith(GitReflogRef.ORDER)
     }
 
-    /**
-     * The directory holding `logs/HEAD` and the one holding `logs/refs`.
-     *
-     * They are the same directory in an ordinary repository and differ inside a linked worktree, which keeps a
-     * HEAD reflog of its own while sharing the ref reflogs with the repository it was created from.
-     */
+    /** Asks git for the directory holding `logs/HEAD` and the one holding `logs/refs`. */
     @Throws(VcsException::class)
     private fun logDirectories(repository: GitRepository): Pair<File, File> {
         val handler = GitLineHandler(repository.project, repository.root, GitCommand.REV_PARSE)
@@ -116,46 +117,5 @@ internal object GitReflogReader {
         val gitDirectory = paths.firstOrNull() ?: throw VcsException(GitReflogBundle.message("reflog.error.git.dir"))
 
         return gitDirectory to (paths.getOrNull(1) ?: gitDirectory)
-    }
-
-    private fun parseEntry(index: Int, line: String, ref: GitReflogRef): GitReflogEntry? {
-        // The subject of the commit comes last and is the only field allowed to hold a separator of its own.
-        val fields = line.split(FIELD_SEPARATOR, limit = FIELD_COUNT)
-        if (fields.size < FIELD_COUNT) return null
-        val (hash, dateSelector, reflogSubject, author, commitSubject) = fields
-
-        return GitReflogEntry(
-            selector = dateSelector.substringBefore(SELECTOR_SEPARATOR) + SELECTOR_SEPARATOR + index + "}",
-            hash = hash,
-            timestamp = parseTimestamp(dateSelector),
-            action = actionOf(reflogSubject, ref),
-            description = descriptionOf(reflogSubject, ref),
-            author = author,
-            subject = commitSubject,
-        )
-    }
-
-    /**
-     * Reflog subjects are written as "<action>: <details>", e.g. "checkout: moving from master to feature", and the
-     * part before the colon is what the entry did.
-     *
-     * The stash is the exception: its subjects read "WIP on master: eddeef8 first", where the colon separates the
-     * branch from the commit and nothing in the subject is an action. Every stash entry does the same thing, so
-     * there is no action to show and none to filter by either.
-     *
-     * Entries written by older git versions or by scripts may carry no colon at all, and are taken as an action
-     * with no details.
-     */
-    private fun actionOf(subject: String, ref: GitReflogRef): String =
-        if (ref.kind == GitReflogRef.Kind.STASH) "" else subject.substringBefore(':').trim()
-
-    private fun descriptionOf(subject: String, ref: GitReflogRef): String =
-        if (ref.kind == GitReflogRef.Kind.STASH) subject.trim()
-        else subject.substringAfter(':', missingDelimiterValue = "").trim()
-
-    /** Extracts the seconds out of a `HEAD@{1789253693}` selector. */
-    private fun parseTimestamp(dateSelector: String): Long {
-        val seconds = dateSelector.substringAfter(SELECTOR_SEPARATOR, missingDelimiterValue = "").substringBefore('}')
-        return (seconds.toLongOrNull() ?: 0L) * 1000L
     }
 }

@@ -114,7 +114,9 @@ says nothing about the new one.
   tabs of the Git and Commit tool windows are registered, and is shown for projects that have Git as an active VCS.
 - Entries are read with `git reflog show` in a machine-readable format: one record per output line, fields separated
   by `0x01`. See [GitReflogReader.kt][file:GitReflogReader.kt] for why the timestamp has to come from the `%gd`
-  placeholder and the `HEAD@{n}` index from the record position.
+  placeholder, and [GitReflogParser.kt][file:GitReflogParser.kt] for why the `HEAD@{n}` index comes from the
+  record's position in the output. The parser is a separate object so that the format can be covered by tests
+  without a repository.
 - Every action acts on what the tab publishes into the data context: the selected entries for the plugin's own
   actions, the revision numbers for Select in Git Log and Copy Revision Number, which are platform actions the
   plugin only references.
@@ -255,6 +257,7 @@ manually via UI.
 [file:build.gradle.kts]: ./build.gradle.kts
 [file:CHANGELOG.md]: ./CHANGELOG.md
 [file:gradle.properties]: ./gradle.properties
+[file:GitReflogParser.kt]: ./src/main/kotlin/cz/loplex/reflog/GitReflogParser.kt
 [file:GitReflogReader.kt]: ./src/main/kotlin/cz/loplex/reflog/GitReflogReader.kt
 [file:plugin.xml]: ./src/main/resources/META-INF/plugin.xml
 
