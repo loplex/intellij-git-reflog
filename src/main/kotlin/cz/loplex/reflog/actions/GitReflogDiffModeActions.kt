@@ -78,7 +78,11 @@ internal class GitReflogDiffModeSwitch : ComboBoxAction(), DumbAware {
     override fun update(e: AnActionEvent) {
         val modes = e.getData(GitReflogDataKeys.DIFF_MODES)
         e.presentation.isEnabled = modes != null
-        e.presentation.text = shownMode(modes)?.let(::titleOf) ?: GitReflogBundle.message("reflog.diff.mode.none")
+        // Named as well as valued, the way the tab's own filters read "Ref: HEAD": on its own, "Reflog Step"
+        // says nothing about what it is a choice between.
+        e.presentation.text = shownMode(modes)
+            ?.let { GitReflogBundle.message("reflog.diff.mode.label", titleOf(it)) }
+            ?: GitReflogBundle.message("reflog.diff.mode.none")
         e.presentation.description = shownMode(modes)?.let(::descriptionOf)
     }
 
@@ -94,9 +98,12 @@ internal class GitReflogDiffModeSwitch : ComboBoxAction(), DumbAware {
 }
 
 /**
- * The same readings on the file pane's context menu, where only the ones the selection has an answer for are
- * listed: a menu is read top to bottom and shown on demand, so it can be exactly as long as the moment calls for,
- * while the toolbar switch has to keep its full shape to stay a switch.
+ * The same readings on the file pane's context menu, in the same shape the switch gives them: every mode listed,
+ * the ones the selection has no answer for greyed out.
+ *
+ * Listing only what fits would make for a shorter menu and a worse one. A set that changes with the selection
+ * cannot be learnt, and a reading that is merely absent leaves nothing to explain itself - where a greyed one
+ * says that it exists and that this selection is not for it.
  */
 internal class GitReflogDiffModeGroup : ActionGroup(), DumbAware {
 
@@ -108,12 +115,11 @@ internal class GitReflogDiffModeGroup : ActionGroup(), DumbAware {
 
     override fun update(e: AnActionEvent) {
         val modes = e.getData(GitReflogDataKeys.DIFF_MODES)
-        // A single applicable mode is not a choice, and a submenu offering it would only be in the way.
-        e.presentation.isEnabledAndVisible = modes != null && modes.applicable.size > 1
+        // Nothing fitting at all is the one case with no choice to offer - a stash reflog with several entries
+        // selected - and four greyed readings would explain it no better than the empty pane already does.
+        e.presentation.isEnabledAndVisible = modes != null && modes.applicable.isNotEmpty()
     }
 
-    override fun getChildren(e: AnActionEvent?): Array<AnAction> {
-        val modes = e?.getData(GitReflogDataKeys.DIFF_MODES) ?: return AnAction.EMPTY_ARRAY
-        return modes.applicable.map { GitReflogDiffModeAction(it) }.toTypedArray()
-    }
+    override fun getChildren(e: AnActionEvent?): Array<AnAction> =
+        GitReflogDiffMode.entries.map { GitReflogDiffModeAction(it) }.toTypedArray()
 }
