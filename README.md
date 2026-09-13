@@ -54,16 +54,47 @@ and the diff of the file selected among them. The files pane sits next to the ta
 arrangement the Log uses, for the same reason: a diff is the wider of the two, so it goes around the table
 rather than beside it.
 
-The files are read with `git show`, so they are there for a commit no ref reaches any more - the same reason
+The files are read from git directly, so they are there for a commit no ref reaches any more - the same reason
 Show Diff works where Select in Git Log does not.
 
-Only a single selected entry has files to show. Two reflog entries need not stand on the same branch at all,
-which leaves nothing a diff between them could mean.
+#### What the files are compared against
+
+A reflog is a timeline of one ref, which means "the state before" and "the state after" exist even where the
+commits are on branches that never met. More than one comparison is therefore worth making, and **Compare** on
+the file pane's toolbar picks between them:
+
+| Comparison | What it shows | Selection it needs |
+| --- | --- | --- |
+| **Reflog Step** | What the selected movements did to the working tree, from the state before the oldest to the state after the newest | Any, as long as the reflog still holds the entry before the oldest selected one |
+| **Between Selected** | How the newest selected state differs from the oldest one, leaving out the movement that produced the oldest | Two or more entries |
+| **Selected Commits** | What each selected commit changed against its own parent, merged into one tree, as the Log answers a multiple selection | Any, and for more than one entry only where they sit on one line of history |
+| **Against Working Tree** | How the working tree differs from the selected state | A single entry |
+
+Reflog Step is where the tab starts, and the one that sets the reflog apart from the Log: for a `commit` entry
+it is the commit's own diff, but for a `checkout` or a `reset` it is "what changed under me", which no diff
+against a parent can show.
+
+Two comparisons are deliberately withheld. A stash reflog is a stack of unrelated entries rather than a timeline
+of one state, so the readings that treat it as a timeline are not offered for it; and merging the changes of
+commits that sit on branches which never met produces a tree of changes that undo one another, so **Selected
+Commits** is offered for several entries only once git has confirmed each is an ancestor of the next.
+
+The choice is remembered outside the project, so the tab opens the way it was last left. A choice that has no
+answer for the selection of the moment gives way to the nearest one that does, rather than emptying the pane -
+and comes back as soon as a selection it suits is made again. What the toolbar and the ticks in the menu show is
+always the comparison on screen, so a selection being answered by a different one is never silent. The context
+menu lists only the comparisons that fit what is selected; the toolbar lists all of them, disabling the rest, so
+that a comparison that exists can still be seen to exist.
 
 Reading the files is held back 150 ms after the selection moves, so walking the table with the arrow keys does
-not start a `git show` per row passed over. A selection that comes back to the same commit - which is what every
-re-read does, by restoring the selection it had - is left alone rather than read again: what a commit changed
-cannot change.
+not start a git call per row passed over. A selection that comes back to the same entries under the same
+comparison - which is what every re-read does, by restoring the selection it had - is left alone rather than
+read again: what a commit changed cannot change. **Against Working Tree** is the exception, being the one
+reading whose answer can change without the reflog changing.
+
+Whether the selected entries sit on one line of history takes a `git merge-base --is-ancestor` per neighbouring
+pair to answer, so it is asked only once the answer can change which comparison is shown - never on the way past
+a row.
 
 The diff pane is placed from the toolbar, by the platform's pair of preview buttons - **Preview Diff on the
 Right** and **Preview Diff at the Bottom**. Between them they cover all three states in a single click: neither

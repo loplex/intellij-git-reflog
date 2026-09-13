@@ -61,10 +61,16 @@
              itself; these are what the Log adds on top of them. -->
         <group id="GitReflog.ChangesBrowser.Toolbar">
             <reference ref="Vcs.RepositoryChangesBrowserToolbar"/>
+            <separator/>
+            <action id="GitReflog.DiffMode"
+                    class="cz.loplex.reflog.actions.GitReflogDiffModeSwitch"/>
         </group>
 
         <group id="GitReflog.ChangesBrowser.Popup">
             <reference ref="Vcs.RepositoryChangesBrowserMenu"/>
+            <separator/>
+            <group id="GitReflog.DiffModes"
+                   class="cz.loplex.reflog.actions.GitReflogDiffModeGroup"/>
         </group>
 
         <group id="GitReflog.ContextMenu">

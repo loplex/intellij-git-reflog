@@ -18,5 +18,8 @@
   buttons: they place the diff pane, and hide it when neither is pressed.
 - The file pane's own toolbar and menu, as in the Log: Show Diff, Group By, Revert, Show History for Revision,
   and the platform's repository menu on right click.
+- Compare on the file pane, choosing what the files of the selected entries are compared against: the reflog
+  step they make, the two selected states, each selected commit against its own parent, or the working tree.
+  Several entries can now be selected, which the file pane used to have no answer for.
 - Show Diff, Select in Git Log and Copy Revision Number on the selected entry.
 - Checkout Revision, New Branch from Here and Reset Current Branch to Here on the selected entry.

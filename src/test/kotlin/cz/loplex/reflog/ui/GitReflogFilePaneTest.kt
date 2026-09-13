@@ -26,6 +26,15 @@ class GitReflogFilePaneTest : BasePlatformTestCase() {
         assertTrue("Group By is not on the file pane's toolbar: $ids", "ChangesView.GroupBy" in ids)
     }
 
+    /** Compare is offered in both places a file pane offers anything: its toolbar and its context menu. */
+    fun testBothFilePaneMenusOfferTheComparisons() {
+        val toolbar = idsOf(ActionManager.getInstance().getAction("GitReflog.ChangesBrowser.Toolbar"))
+        assertTrue("Compare is not on the file pane's toolbar: $toolbar", "GitReflog.DiffMode" in toolbar)
+
+        val popup = idsOf(ActionManager.getInstance().getAction("GitReflog.ChangesBrowser.Popup"))
+        assertTrue("Compare is not on the file pane's context menu: $popup", "GitReflog.DiffModes" in popup)
+    }
+
     /** The two buttons that place the diff pane belong to the tab's toolbar, next to Refresh. */
     fun testTabToolbarCarriesTheDiffPreviewButtons() {
         val ids = idsOf(ActionManager.getInstance().getAction("GitReflog.Toolbar"))

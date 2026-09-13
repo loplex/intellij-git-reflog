@@ -1,6 +1,7 @@
 package cz.loplex.reflog.ui
 
 import com.intellij.dvcs.DvcsUtil
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
@@ -19,7 +20,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vcs.VcsDataKeys
-import com.intellij.openapi.vcs.changes.Change
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.PopupHandler
@@ -31,11 +31,16 @@ import com.intellij.ui.table.TableView
 import com.intellij.util.SingleAlarm
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import cz.loplex.reflog.GitReflogAncestry
 import cz.loplex.reflog.GitReflogBundle
+import cz.loplex.reflog.GitReflogChangesResult
 import cz.loplex.reflog.GitReflogData
+import cz.loplex.reflog.GitReflogDiffMode
+import cz.loplex.reflog.GitReflogDiffModes
 import cz.loplex.reflog.GitReflogEntry
 import cz.loplex.reflog.GitReflogReader
 import cz.loplex.reflog.GitReflogRef
+import cz.loplex.reflog.GitReflogSelection
 import cz.loplex.reflog.GitReflogService
 import cz.loplex.reflog.actions.showReflogEntryDiff
 import git4idea.GitVcs
@@ -100,13 +105,22 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     private var limit = GitReflogReader.PAGE_SIZE
 
     /**
-     * Commit whose changes the file pane currently shows, if any.
+     * Selection and mode the file pane currently shows, if any.
      *
-     * What a commit changed cannot change, so a selection that comes back to the same commit - which is what
-     * every auto-refresh does, by restoring the selection it had - is left alone instead of being re-read and
-     * redrawn under the user.
+     * What a commit changed cannot change, so a selection that comes back to the same entries under the same
+     * mode - which is what every auto-refresh does, by restoring the selection it had - is left alone instead of
+     * being re-read and redrawn under the user.
      */
-    private var shownChangesFor: String? = null
+    private var shownChangesFor: ChangesKey? = null
+
+    /**
+     * What the last read found out about how the selected entries stand to one another in the graph.
+     *
+     * Reset to [GitReflogAncestry.UNKNOWN] with every new selection, so that a mode is offered until git says it
+     * should not be rather than the other way round: the answer takes a git call, and blanking the modes until
+     * it lands would make the switch flicker on every arrow key.
+     */
+    private var ancestry: GitReflogAncestry = GitReflogAncestry.UNKNOWN
 
     /** Repository whose reflog is currently shown. */
     var repository: GitRepository? = null
@@ -115,6 +129,23 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     /** Ref whose reflog is currently shown. */
     var ref: GitReflogRef = GitReflogRef.HEAD
         private set
+
+    /**
+     * Which question the file pane answers about the selected entries, remembered across sessions the way the
+     * other choices about the pane are.
+     *
+     * What is remembered is what the user picked, not what was shown: a mode that does not fit the selection of
+     * the moment gives way to one that does, and comes back as soon as a selection it suits is made again.
+     */
+    var diffMode: GitReflogDiffMode
+        get() = PropertiesComponent.getInstance().getValue(DIFF_MODE)
+            ?.let { name -> GitReflogDiffMode.entries.firstOrNull { it.name == name } }
+            ?: GitReflogDiffMode.DEFAULT
+        set(value) {
+            PropertiesComponent.getInstance().setValue(DIFF_MODE, value.name)
+            loadChanges()
+        }
+
 
     /** Whether the diff of the file selected in the file pane is shown at all. */
     var isDiffPreviewVisible: Boolean
@@ -347,42 +378,60 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         }
     }
 
-    /**
-     * Reads the changes of the selected entry into the file pane.
-     *
-     * Only a single entry is answered: two reflog entries need not stand on the same branch at all, which leaves
-     * nothing a diff between them could mean.
-     */
-    private fun loadChanges() {
-        val repository = repository
-        val selected = table.selectedObjects
+    /** What the table has selected, against the reflog it was selected from. */
+    fun selection(): GitReflogSelection = GitReflogSelection(ref, entries, table.selectedObjects)
 
-        if (repository == null || selected.size != 1) {
-            val text = when {
-                selected.size > 1 -> GitReflogBundle.message("reflog.changes.one.only")
-                else -> GitReflogBundle.message("reflog.changes.none.selected")
-            }
-            showChangesEmptyText(text)
-            return
-        }
-
-        val entry = selected.single()
-        if (entry.hash == shownChangesFor) return
-
-        changesJob?.cancel()
-        shownChangesFor = entry.hash
-        changesJob = GitReflogService.getInstance(project).loadChanges(
-            repository,
-            entry,
-            onStarted = { changesPanel.showEmptyText(GitReflogBundle.message("reflog.changes.loading")) },
-            onFinished = { result -> showChanges(entry, result) },
+    /** What the modes stand at for what is selected right now, for the switch and the context menu to show. */
+    fun diffModes(): GitReflogDiffModes {
+        val selection = selection()
+        return GitReflogDiffModes(
+            preferred = diffMode,
+            effective = diffMode.effectiveFor(selection, ancestry),
+            applicable = GitReflogDiffMode.entries.filter { it.isApplicableTo(selection, ancestry) },
         )
     }
 
-    private fun showChanges(entry: GitReflogEntry, result: Result<List<Change>>) {
+    /**
+     * Reads the changes of the selected entries into the file pane, under the mode that fits them.
+     *
+     * Which mode that is settles in the background rather than here: telling [GitReflogDiffMode.UNION] apart
+     * from a selection it must not be offered for takes a walk of the graph.
+     */
+    private fun loadChanges() {
+        val repository = repository
+        val selection = selection()
+
+        if (repository == null || selection.selected.isEmpty()) {
+            showChangesEmptyText(GitReflogBundle.message("reflog.changes.none.selected"))
+            return
+        }
+
+        // What a commit changed cannot change, but what the working tree holds can, so that one reading is read
+        // again every time the panel is asked to - after a refresh among other things, which is what follows the
+        // commits and checkouts that move the tree under it.
+        val key = ChangesKey(selection.selected.map { it.identity }, diffMode)
+        if (key == shownChangesFor && diffMode != GitReflogDiffMode.WORKING_TREE) return
+
+        changesJob?.cancel()
+        shownChangesFor = key
+        ancestry = GitReflogAncestry.UNKNOWN
+        changesJob = GitReflogService.getInstance(project).loadChanges(
+            repository,
+            selection,
+            diffMode,
+            onStarted = { changesPanel.showEmptyText(GitReflogBundle.message("reflog.changes.loading")) },
+            onFinished = { result -> showChanges(selection, result) },
+        )
+    }
+
+    private fun showChanges(selection: GitReflogSelection, result: Result<GitReflogChangesResult>) {
         result
-            .onSuccess { changes ->
-                changesPanel.setChanges(changes, GitReflogBundle.message("reflog.changes.empty", entry.shortHash))
+            .onSuccess { outcome ->
+                ancestry = outcome.ancestry
+                val mode = outcome.mode
+                // Nothing fits a stash reflog with more than one entry selected, and nothing is what it gets.
+                if (mode == null) changesPanel.showEmptyText(GitReflogBundle.message("reflog.changes.one.only"))
+                else changesPanel.setChanges(outcome.changes, emptyTextFor(selection, mode))
             }
             .onFailure { error ->
                 shownChangesFor = null
@@ -390,6 +439,26 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
                     GitReflogBundle.message("reflog.changes.error", error.message.orEmpty()),
                 )
             }
+    }
+
+    /**
+     * Says what came back empty, naming the two states the mode compared.
+     *
+     * Worth the three messages: "nothing changed" is a different statement about a reset than it is about a
+     * commit, and a pane that does not say which comparison it made leaves the user unable to tell the mode
+     * they asked for from the one they were given.
+     */
+    private fun emptyTextFor(selection: GitReflogSelection, mode: GitReflogDiffMode): String {
+        val old = mode.oldSideOf(selection)
+        val new = mode.newSideOf(selection)
+        return when {
+            mode == GitReflogDiffMode.WORKING_TREE && old != null ->
+                GitReflogBundle.message("reflog.changes.empty.working.tree", old.shortHash)
+            old != null && new != null ->
+                GitReflogBundle.message("reflog.changes.empty.range", old.shortHash, new.shortHash)
+            else ->
+                GitReflogBundle.message("reflog.changes.empty", selection.newest?.shortHash.orEmpty())
+        }
     }
 
     private fun showChangesEmptyText(text: String) {
@@ -423,6 +492,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         sink[GitReflogDataKeys.REPOSITORY] = repository
         sink[GitReflogDataKeys.SELECTED_ENTRIES] = selected
         sink[GitReflogDataKeys.HAS_MORE] = hasMore
+        sink[GitReflogDataKeys.DIFF_MODES] = diffModes()
         sink[VcsDataKeys.VCS] = GitVcs.getKey()
         sink[VcsDataKeys.VCS_REVISION_NUMBER] = selected.firstOrNull()?.revisionNumber
         sink[VcsDataKeys.VCS_REVISION_NUMBERS] = selected.map { it.revisionNumber }.toTypedArray()
@@ -545,8 +615,12 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         }
     }
 
+    /** What a shown set of changes is keyed by: the entries it was read for, and the mode it was read under. */
+    private data class ChangesKey(val entries: List<Any>, val mode: GitReflogDiffMode)
+
     companion object {
         const val TAB_NAME: String = "Reflog"
+        private const val DIFF_MODE = "GitReflog.diffMode"
         private const val TOOLBAR_PLACE = "GitReflogToolbar"
         private const val TOOLBAR_GROUP_ID = "GitReflog.Toolbar"
         private const val CONTEXT_MENU_PLACE = "GitReflogPopup"

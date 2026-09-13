@@ -1,6 +1,7 @@
 package cz.loplex.reflog.ui
 
 import com.intellij.openapi.actionSystem.DataKey
+import cz.loplex.reflog.GitReflogDiffModes
 import cz.loplex.reflog.GitReflogEntry
 import git4idea.repo.GitRepository
 
@@ -17,4 +18,10 @@ internal object GitReflogDataKeys {
      * off the EDT like every other action of the tab.
      */
     val HAS_MORE: DataKey<Boolean> = DataKey.create("GitReflog.HasMore")
+
+    /**
+     * Which readings of the selected entries are on offer, and which one the file pane is showing. Published
+     * rather than read off the panel because working it out reads the table, which only the EDT may do.
+     */
+    val DIFF_MODES: DataKey<GitReflogDiffModes> = DataKey.create("GitReflog.DiffModes")
 }
