@@ -38,7 +38,9 @@ The toolbar holds the ref selector, the action filter, Refresh, and, in projects
 repository, a repository selector. The filter field sits at the right end of the same row.
 
 The tab re-reads the reflog on its own whenever the state of the repository changes, which covers every operation
-that writes a reflog record.
+that writes a reflog record. The selected entry survives such a re-read: it is recognised by what it records
+rather than by its selector, since every new record pushes `HEAD@{0}` down to `HEAD@{1}` and selectors therefore
+name a different entry after every commit.
 
 ### Which refs can be shown
 

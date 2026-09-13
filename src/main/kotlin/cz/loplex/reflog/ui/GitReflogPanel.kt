@@ -25,6 +25,7 @@ import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.PopupHandler
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.SearchTextField
+import com.intellij.ui.TableUtil
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.table.TableView
 import com.intellij.util.ui.JBUI
@@ -158,7 +159,11 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
 
     private fun applyFilter() {
         val shown = entries.filter(filter::matches)
+        // Replacing the items clears the selection, so what was selected is carried over by hand: an auto-refresh
+        // fires after every commit, checkout and rebase, and it must not move the cursor out from under the user.
+        val selected = table.selectedObjects.mapTo(HashSet()) { it.identity }
         tableModel.items = ArrayList(shown)
+        restoreSelection(selected)
 
         table.emptyText.text = when {
             entries.isEmpty() -> GitReflogBundle.message("reflog.status.empty")
@@ -171,6 +176,16 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             shown.size != entries.size -> GitReflogBundle.message("reflog.count.filtered", shown.size, entries.size)
             else -> ""
         }
+    }
+
+    private fun restoreSelection(identities: Set<Any>) {
+        if (identities.isEmpty()) return
+
+        val rows = tableModel.items.withIndex().filter { it.value.identity in identities }.map { it.index }
+        if (rows.isEmpty()) return
+
+        TableUtil.selectRows(table, rows.toIntArray())
+        TableUtil.scrollSelectionToVisible(table)
     }
 
     private fun repositories(): List<GitRepository> = GitRepositoryManager.getInstance(project).repositories

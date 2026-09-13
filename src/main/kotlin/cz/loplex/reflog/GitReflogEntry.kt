@@ -33,6 +33,15 @@ internal data class GitReflogEntry(
 
     val revisionNumber: GitRevisionNumber get() = GitRevisionNumber(hash, Date(timestamp))
 
+    /**
+     * What identifies the record across a re-read, so that a reload can put the selection back.
+     *
+     * Everything but the [selector], because the selector is a position rather than an identity: every new record
+     * pushes `HEAD@{0}` down to `HEAD@{1}`, and keeping the selector would quietly move the selection to the
+     * neighbouring entry after every commit.
+     */
+    val identity: Any get() = copy(selector = "")
+
     private companion object {
         const val SHORT_HASH_LENGTH = 8
     }
