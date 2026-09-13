@@ -22,6 +22,13 @@ The tab lists the reflog of one ref of one repository, newest entry first:
 | Action      | the operation that moved `HEAD`: `commit`, `checkout`, `reset`, `rebase (finish)`, ...    |
 | Description | the rest of the reflog message, for example `moving from master to feature`               |
 | Commit      | short hash of the commit `HEAD` pointed at afterwards                                     |
+| Commit Message | first line of that commit's own message                                               |
+| Author      | author of that commit                                                                    |
+
+The last three columns describe the commit rather than the movement: a `checkout: moving from master to feature`
+entry says nothing about what it moved to, and the commit is often one no branch reaches any more, so the Log
+cannot be asked either. They cost nothing extra to read - `git reflog show` is `git log --walk-reflogs`, so the
+commit's own placeholders are available in the same format string.
 
 Stash entries are the exception to the Action/Description split: `git stash` writes subjects such as
 `WIP on master: eddeef8 first`, where the colon separates the branch from the commit rather than an action from
@@ -51,8 +58,8 @@ Switching the repository resets the ref to `HEAD`, and so does asking for a ref 
 
 Two filters narrow what the table shows, and they combine:
 
-- **the filter field** - matched against the description, the action and the selector, and against the beginning
-  of the hash, so a pasted hash prefix finds its entry;
+- **the filter field** - matched against everything shown as text: the description, the action, the selector, the
+  commit message and the author, plus the beginning of the hash, so a pasted hash prefix finds its entry;
 - **the action filter** - a list of checkboxes over the kinds of operation. The kinds are collected from the
   entries at hand, so the list never offers an operation this reflog does not contain, and `commit (amend)` is
   offered under `commit` rather than as a kind of its own. A reflog whose entries carry no action at all - the

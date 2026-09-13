@@ -9,7 +9,10 @@ import cz.loplex.reflog.GitReflogEntry
  * keeps the set of action kinds offered to the user honest - they are collected from the entries at hand.
  */
 internal data class GitReflogFilter(
-    /** Matched against the description, the action, the selector and the beginning of the hash. */
+    /**
+     * Matched against everything the table shows as text - the reflog message and its action, the selector, the
+     * commit's subject and author - and against the beginning of the hash, so a pasted prefix finds its entry.
+     */
     val text: String = "",
     /** Action kinds to keep. Empty means every kind passes. */
     val actionKinds: Set<String> = emptySet(),
@@ -23,6 +26,8 @@ internal data class GitReflogFilter(
         return entry.description.contains(text, ignoreCase = true) ||
                 entry.action.contains(text, ignoreCase = true) ||
                 entry.selector.contains(text, ignoreCase = true) ||
+                entry.subject.contains(text, ignoreCase = true) ||
+                entry.author.contains(text, ignoreCase = true) ||
                 entry.hash.startsWith(text, ignoreCase = true)
     }
 }

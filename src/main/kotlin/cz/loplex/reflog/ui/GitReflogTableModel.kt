@@ -54,12 +54,18 @@ private val grayedRenderer = object : ColoredTableCellRenderer() {
     }
 }
 
+/**
+ * What the entry recorded comes first, what the commit behind it is comes after: the reflog message of a checkout
+ * or a reset says nothing about the commit it moved to, which is the question the last three columns answer.
+ */
 private val COLUMNS: Array<ReflogColumn> = arrayOf(
     ReflogColumn(GitReflogBundle.message("reflog.column.selector"), preferredWidth = 90) { it.selector },
     ReflogColumn(GitReflogBundle.message("reflog.column.date"), preferredWidth = 130) {
         DateFormatUtil.formatPrettyDateTime(it.timestamp)
     },
-    ReflogColumn(GitReflogBundle.message("reflog.column.action"), preferredWidth = 120) { it.action },
-    ReflogColumn(GitReflogBundle.message("reflog.column.description"), preferredWidth = 400) { it.description },
+    ReflogColumn(GitReflogBundle.message("reflog.column.action"), preferredWidth = 110) { it.action },
+    ReflogColumn(GitReflogBundle.message("reflog.column.description"), preferredWidth = 280) { it.description },
     ReflogColumn(GitReflogBundle.message("reflog.column.commit"), preferredWidth = 90, grayedRenderer) { it.shortHash },
+    ReflogColumn(GitReflogBundle.message("reflog.column.subject"), preferredWidth = 280) { it.subject },
+    ReflogColumn(GitReflogBundle.message("reflog.column.author"), preferredWidth = 130, grayedRenderer) { it.author },
 )

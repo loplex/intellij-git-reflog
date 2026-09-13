@@ -18,6 +18,10 @@ internal data class GitReflogEntry(
     val action: @NlsSafe String,
     /** Reflog message without the [action] prefix, for example `moving from master to feature`. */
     val description: @NlsSafe String,
+    /** Author of the commit [hash] - not of the reflog record, which git does not attribute to anyone. */
+    val author: @NlsSafe String,
+    /** First line of the message of the commit [hash]. */
+    val subject: @NlsSafe String,
 ) {
     val shortHash: @NlsSafe String get() = hash.take(SHORT_HASH_LENGTH)
 

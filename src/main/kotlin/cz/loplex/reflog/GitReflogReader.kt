@@ -20,8 +20,14 @@ internal object GitReflogReader {
      * `HEAD@{1789253693}`. This is also why the index form of the selector cannot be read from git here:
      * `%gD`/`%gd` render *either* the index *or* the date, never both. The index is derived from the record
      * position instead, which holds because the whole reflog is read starting from its newest entry.
+     *
+     * `git reflog show` is `git log --walk-reflogs`, which is why the commit's own author and subject can be
+     * asked for in the same breath as the reflog's, and why they are available even for a commit no ref reaches.
      */
-    private const val PRETTY_FORMAT = "%H%x01%gd%x01%gs"
+    private const val PRETTY_FORMAT = "%H%x01%gd%x01%gs%x01%an%x01%s"
+
+    /** Number of fields [PRETTY_FORMAT] produces; the last one is the commit subject. */
+    private const val FIELD_COUNT = 5
     private const val FIELD_SEPARATOR = '\u0001'
     private const val SELECTOR_SEPARATOR = "@{"
 
@@ -107,16 +113,19 @@ internal object GitReflogReader {
     }
 
     private fun parseEntry(index: Int, line: String, ref: GitReflogRef): GitReflogEntry? {
-        val fields = line.split(FIELD_SEPARATOR)
-        if (fields.size < 3) return null
-        val (hash, dateSelector, subject) = fields
+        // The subject of the commit comes last and is the only field allowed to hold a separator of its own.
+        val fields = line.split(FIELD_SEPARATOR, limit = FIELD_COUNT)
+        if (fields.size < FIELD_COUNT) return null
+        val (hash, dateSelector, reflogSubject, author, commitSubject) = fields
 
         return GitReflogEntry(
             selector = dateSelector.substringBefore(SELECTOR_SEPARATOR) + SELECTOR_SEPARATOR + index + "}",
             hash = hash,
             timestamp = parseTimestamp(dateSelector),
-            action = actionOf(subject, ref),
-            description = descriptionOf(subject, ref),
+            action = actionOf(reflogSubject, ref),
+            description = descriptionOf(reflogSubject, ref),
+            author = author,
+            subject = commitSubject,
         )
     }
 
