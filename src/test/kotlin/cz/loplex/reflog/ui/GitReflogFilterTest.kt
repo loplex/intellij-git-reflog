@@ -60,6 +60,15 @@ class GitReflogFilterTest {
     }
 
     @Test
+    fun `excluding every kind there is shows everything rather than nothing`() {
+        // Reachable by unticking the last kind and by unticking All, and neither is a request to see nothing -
+        // so the panel turns it back into no filter. The filter itself still means what it says.
+        val everyKind = entries.mapTo(HashSet()) { it.actionKind }
+
+        assertEquals(emptyList<GitReflogEntry>(), filtered(GitReflogFilter(excludedActionKinds = everyKind)))
+    }
+
+    @Test
     fun `text and action kind both have to match`() {
         assertEquals(emptyList<GitReflogEntry>(), filtered(GitReflogFilter("feature", setOf("checkout"))))
     }

@@ -358,6 +358,18 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      * Kinds present in the entries at hand. Stash entries carry no action at all, which is why the empty kind is
      * dropped rather than offered as a nameless item.
      */
+    /**
+     * Narrows the table to the kinds not in [excluded], taking "none of them" as "all of them".
+     *
+     * Excluding every kind there is asks to see nothing, which is no question at all, and it is reachable two
+     * ways - unticking the last kind, and unticking All. Both come back to All instead, as an empty selection
+     * does in the Log's own filters.
+     */
+    private fun setActionKindFilter(excluded: Set<String>) {
+        val nothingLeft = excluded.containsAll(actionKinds())
+        setFilter(filter.copy(excludedActionKinds = if (nothingLeft) emptySet() else excluded))
+    }
+
     private fun actionKinds(): List<String> =
         entries.mapNotNullTo(sortedSetOf()) { it.actionKind.ifEmpty { null } }.toList()
 
@@ -620,12 +632,10 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         override fun getCurrentText(): String {
             if (filter.excludedActionKinds.isEmpty()) return GitReflogBundle.message("reflog.filter.action.all")
 
+            // No "none" case: a filter that hides every kind is turned back into no filter at all.
             val shown = actionKinds() - filter.excludedActionKinds
-            return when (shown.size) {
-                0 -> GitReflogBundle.message("reflog.filter.action.none")
-                1 -> shown.first()
-                else -> GitReflogBundle.message("reflog.filter.action.several", shown.size)
-            }
+            return if (shown.size == 1) shown.first()
+            else GitReflogBundle.message("reflog.filter.action.several", shown.size)
         }
 
         override fun createActionGroup(): ActionGroup {
@@ -651,8 +661,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         override fun isSelected(e: AnActionEvent): Boolean = filter.excludedActionKinds.isEmpty()
 
         override fun setSelected(e: AnActionEvent, state: Boolean) {
-            val excluded = if (state) emptySet() else actionKinds().toSet()
-            setFilter(filter.copy(excludedActionKinds = excluded))
+            setActionKindFilter(if (state) emptySet() else actionKinds().toSet())
         }
     }
 
@@ -671,7 +680,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         override fun setSelected(e: AnActionEvent, state: Boolean) {
             val excluded = filter.excludedActionKinds.toMutableSet()
             if (state) excluded.remove(kind) else excluded.add(kind)
-            setFilter(filter.copy(excludedActionKinds = excluded))
+            setActionKindFilter(excluded)
         }
     }
 
