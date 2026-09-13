@@ -67,10 +67,15 @@ Two filters narrow what the table shows, and they combine:
 
 - **the filter field** - matched against everything shown as text: the description, the action, the selector, the
   commit message and the author, plus the beginning of the hash, so a pasted hash prefix finds its entry;
-- **the action filter** - a list of checkboxes over the kinds of operation. The kinds are collected from the
-  entries at hand, so the list never offers an operation this reflog does not contain, and `commit (amend)` is
-  offered under `commit` rather than as a kind of its own. A reflog whose entries carry no action at all - the
-  stash - leaves the filter disabled.
+- **the action filter** - a checkbox per kind of operation, every one of them ticked to begin with, since every
+  kind is shown. Unticking one is what narrows the table, and the filter's reset button puts them all back. The
+  kinds are collected from the entries at hand, so the list never offers an operation this reflog does not
+  contain, and `commit (amend)` is offered under `commit` rather than as a kind of its own. A reflog whose
+  entries carry no action at all - the stash - leaves the filter disabled.
+
+  What is remembered is which kinds were unticked, not which were left ticked. The kinds on offer come from the
+  entries read so far, so a Load More can bring one that did not exist when the filter was set - and a kind
+  nobody has unticked has to keep passing.
 
 Both run over the entries already read, which is what makes them instant. Whenever the table shows fewer entries
 than were read, the count at the end of the toolbar says so.

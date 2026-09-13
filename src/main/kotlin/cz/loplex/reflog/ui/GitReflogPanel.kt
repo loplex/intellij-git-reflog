@@ -380,16 +380,22 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     /**
      * Narrows the table to chosen kinds of operation. The kinds offered are the ones present in the entries at
      * hand, so the popup never lists an operation this reflog does not contain.
+     *
+     * Every kind starts out ticked, since every kind is shown; unticking one is what narrows the table. There is
+     * no separate "All" item - it would have to sit unticked next to a list of ticked kinds, saying the same
+     * thing twice - and the filter's own reset button is what puts every kind back.
      */
     private inner class ActionKindFilter :
         GitReflogFilterComponent(GitReflogBundle.lazyMessage("reflog.filter.action.name")) {
 
         override fun getCurrentText(): String {
-            val chosen = filter.actionKinds
-            return when {
-                chosen.isEmpty() -> emptyFilterValue
-                chosen.size == 1 -> chosen.first()
-                else -> GitReflogBundle.message("reflog.filter.action.several", chosen.size)
+            if (filter.excludedActionKinds.isEmpty()) return emptyFilterValue
+
+            val shown = actionKinds() - filter.excludedActionKinds
+            return when (shown.size) {
+                0 -> GitReflogBundle.message("reflog.filter.action.none")
+                1 -> shown.first()
+                else -> GitReflogBundle.message("reflog.filter.action.several", shown.size)
             }
         }
 
@@ -399,19 +405,13 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
          */
         override fun getEmptyFilterValue(): String = ""
 
-        override fun isValueSelected(): Boolean = filter.actionKinds.isNotEmpty()
+        override fun isValueSelected(): Boolean = filter.excludedActionKinds.isNotEmpty()
 
-        override fun createResetAction(): Runnable = Runnable { setFilter(filter.copy(actionKinds = emptySet())) }
+        override fun createResetAction(): Runnable =
+            Runnable { setFilter(filter.copy(excludedActionKinds = emptySet())) }
 
-        override fun createActionGroup(): ActionGroup {
-            val group = DefaultActionGroup()
-            group.add(DumbAwareAction.create(GitReflogBundle.message("reflog.filter.action.all")) {
-                setFilter(filter.copy(actionKinds = emptySet()))
-            })
-            group.addSeparator()
-            actionKinds().forEach { kind -> group.add(ActionKindToggle(kind)) }
-            return group
-        }
+        override fun createActionGroup(): ActionGroup =
+            DefaultActionGroup(actionKinds().map { ActionKindToggle(it) })
     }
 
     /** One checkbox of the action kind popup; the popup stays open so that several kinds can be picked at once. */
@@ -424,12 +424,12 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             e.presentation.keepPopupOnPerform = KeepPopupOnPerform.Always
         }
 
-        override fun isSelected(e: AnActionEvent): Boolean = kind in filter.actionKinds
+        override fun isSelected(e: AnActionEvent): Boolean = kind !in filter.excludedActionKinds
 
         override fun setSelected(e: AnActionEvent, state: Boolean) {
-            val kinds = filter.actionKinds.toMutableSet()
-            if (state) kinds.add(kind) else kinds.remove(kind)
-            setFilter(filter.copy(actionKinds = kinds))
+            val excluded = filter.excludedActionKinds.toMutableSet()
+            if (state) excluded.remove(kind) else excluded.add(kind)
+            setFilter(filter.copy(excludedActionKinds = excluded))
         }
     }
 

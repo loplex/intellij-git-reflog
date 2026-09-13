@@ -37,19 +37,31 @@ class GitReflogFilterTest {
     }
 
     @Test
-    fun `an action kind keeps the variants of that operation`() {
-        // "commit (amend)" is a commit, and picking the kind must not drop it.
-        assertEquals(listOf(amend, commit), filtered(GitReflogFilter(actionKinds = setOf("commit"))))
+    fun `excluding an action kind drops every variant of that operation`() {
+        // "commit (amend)" is a commit, and excluding the kind has to drop it along with the plain commit.
+        assertEquals(listOf(reset, checkout), filtered(GitReflogFilter(excludedActionKinds = setOf("commit"))))
     }
 
     @Test
-    fun `several action kinds are kept together`() {
-        assertEquals(listOf(amend, commit, reset), filtered(GitReflogFilter(actionKinds = setOf("commit", "reset"))))
+    fun `several action kinds are excluded together`() {
+        assertEquals(
+            listOf(checkout),
+            filtered(GitReflogFilter(excludedActionKinds = setOf("commit", "reset"))),
+        )
+    }
+
+    @Test
+    fun `a kind that was not around when the filter was set still passes`() {
+        // Which is why exclusions are stored rather than selections: a Load More can bring an unseen kind, and
+        // nobody has excluded it.
+        val merge = entry("HEAD@{4}", "e5f6a7b8c9", "merge feature", "Fast-forward", "Merge the parser")
+
+        assertEquals(listOf(merge), listOf(merge).filter(GitReflogFilter(excludedActionKinds = setOf("commit"))::matches))
     }
 
     @Test
     fun `text and action kind both have to match`() {
-        assertEquals(emptyList<GitReflogEntry>(), filtered(GitReflogFilter("feature", setOf("commit"))))
+        assertEquals(emptyList<GitReflogEntry>(), filtered(GitReflogFilter("feature", setOf("checkout"))))
     }
 
     private fun filtered(filter: GitReflogFilter) = entries.filter(filter::matches)
