@@ -381,9 +381,9 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      * Narrows the table to chosen kinds of operation. The kinds offered are the ones present in the entries at
      * hand, so the popup never lists an operation this reflog does not contain.
      *
-     * Every kind starts out ticked, since every kind is shown; unticking one is what narrows the table. There is
-     * no separate "All" item - it would have to sit unticked next to a list of ticked kinds, saying the same
-     * thing twice - and the filter's own reset button is what puts every kind back.
+     * Every kind starts out ticked, since every kind is shown; unticking one is what narrows the table. The All
+     * item above them is a command rather than a state - it ticks every kind again - which is what it is in the
+     * Log too, where the same item is a plain action among the values.
      */
     private inner class ActionKindFilter :
         GitReflogFilterComponent(GitReflogBundle.lazyMessage("reflog.filter.action.name")) {
@@ -410,8 +410,15 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         override fun createResetAction(): Runnable =
             Runnable { setFilter(filter.copy(excludedActionKinds = emptySet())) }
 
-        override fun createActionGroup(): ActionGroup =
-            DefaultActionGroup(actionKinds().map { ActionKindToggle(it) })
+        override fun createActionGroup(): ActionGroup {
+            val group = DefaultActionGroup()
+            group.add(DumbAwareAction.create(GitReflogBundle.message("reflog.filter.action.all")) {
+                setFilter(filter.copy(excludedActionKinds = emptySet()))
+            })
+            group.addSeparator()
+            actionKinds().forEach { kind -> group.add(ActionKindToggle(kind)) }
+            return group
+        }
     }
 
     /** One checkbox of the action kind popup; the popup stays open so that several kinds can be picked at once. */

@@ -68,8 +68,8 @@ Two filters narrow what the table shows, and they combine:
 - **the filter field** - matched against everything shown as text: the description, the action, the selector, the
   commit message and the author, plus the beginning of the hash, so a pasted hash prefix finds its entry;
 - **the action filter** - a checkbox per kind of operation, every one of them ticked to begin with, since every
-  kind is shown. Unticking one is what narrows the table, and the filter's reset button puts them all back. The
-  kinds are collected from the entries at hand, so the list never offers an operation this reflog does not
+  kind is shown. Unticking one is what narrows the table, and **All** above them - or the filter's reset button -
+  ticks them all again. The kinds are collected from the entries at hand, so the list never offers an operation this reflog does not
   contain, and `commit (amend)` is offered under `commit` rather than as a kind of its own. A reflog whose
   entries carry no action at all - the stash - leaves the filter disabled.
 
