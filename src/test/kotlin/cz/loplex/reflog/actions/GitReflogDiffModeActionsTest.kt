@@ -62,7 +62,9 @@ class GitReflogDiffModeActionsTest : BasePlatformTestCase() {
         val presentation = updated(GitReflogDiffModeSwitch(), modes)
         assertTrue("The switch is greyed for a selection two readings fit", presentation.isEnabled)
         assertEquals("Reflog Step", presentation.text)
-        assertNotNull("The switch carries no icon to say what it is a choice between", presentation.icon)
+        // No icon: nothing in the icon set reads as "what these files are being compared as" rather than as a
+        // diff to be opened, and the drop-down arrow already says that this is a choice.
+        assertNull("The switch carries an icon that would read as a diff to open", presentation.icon)
     }
 
     /**

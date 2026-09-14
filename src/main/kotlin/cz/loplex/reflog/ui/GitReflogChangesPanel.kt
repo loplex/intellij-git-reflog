@@ -12,7 +12,9 @@ import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBLoadingPanel
 import com.intellij.util.ui.components.BorderLayoutPanel
 import cz.loplex.reflog.GitReflogBundle
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
+import java.awt.Dimension
 import org.jetbrains.annotations.Nls
 import javax.swing.JComponent
 
@@ -92,6 +94,11 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
 
     init {
         diffSplitter.orientation = isDiffPreviewAtBottom
+        // Dragged to the edge the file pane would otherwise close to nothing, leaving a handle where a pane was
+        // and no way to tell what had happened to it. There is a button for putting it away, which says so.
+        filesSplitter.setHonorComponentsMinimumSize(true)
+        loadingPanel.minimumSize = Dimension(JBUI.scale(MIN_FILE_PANE_WIDTH), 0)
+        mainComponent.minimumSize = Dimension(JBUI.scale(MIN_TABLE_WIDTH), 0)
         filesSplitter.firstComponent = mainComponent
         diffSplitter.firstComponent = filesSplitter
         addToCenter(diffSplitter)
@@ -184,6 +191,12 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
          * toolbar writes - ignore whitespace, the viewer to use - belong to this tab instead of following the Log.
          */
         const val DIFF_PLACE = "GitReflogDiffPreview"
+        /** Narrowest the file pane may be dragged: its own toolbar, and room for a file name beside it. */
+        const val MIN_FILE_PANE_WIDTH = 180
+
+        /** Narrowest the table may be dragged, which is a couple of its columns. */
+        const val MIN_TABLE_WIDTH = 240
+
         const val FILES_SPLITTER_PROPORTION = "GitReflog.files.splitter.proportion"
         const val DIFF_SPLITTER_PROPORTION = "GitReflog.diff.splitter.proportion"
 

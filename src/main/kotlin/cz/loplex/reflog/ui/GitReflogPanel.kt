@@ -57,6 +57,7 @@ import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
+import javax.swing.Box
 import javax.swing.JPanel
 import javax.swing.JSeparator
 import javax.swing.SwingConstants
@@ -386,12 +387,16 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             // Given a height outright, because a row laid out by its contents has none to lend: the platform's
             // own SeparatorComponent asks for a height of zero when stood on end, on the expectation of being
             // stretched by whatever holds it, and is drawn as a gap where nothing stretches it.
+            // A strut rather than a border on the separator: the separator is given its size outright, for want
+            // of a row that would stretch it, and a size given outright leaves no room for a border to be added
+            // to. Standing on its own the gap also holds when Load More is hidden.
+            add(Box.createHorizontalStrut(JBUI.scale(SEPARATOR_GAP_BEFORE)))
             add(
                 JSeparator(SwingConstants.VERTICAL).apply {
                     preferredSize = Dimension(preferredSize.width, JBUI.scale(SEPARATOR_HEIGHT))
-                    border = JBUI.Borders.empty(0, SEPARATOR_GAP_BEFORE, 0, SEPARATOR_GAP_AFTER)
                 },
             )
+            add(Box.createHorizontalStrut(JBUI.scale(SEPARATOR_GAP_AFTER)))
             add(actions.component)
         }
         return JPanel(BorderLayout()).apply {
@@ -757,7 +762,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         private const val LINK_GAP_BEFORE = 8
         private const val SEPARATOR_GAP_BEFORE = 8
         /** Smaller than the gap before it: the toolbar that follows brings an inset of its own. */
-        private const val SEPARATOR_GAP_AFTER = 2
+        private const val SEPARATOR_GAP_AFTER = 1
         /**
          * Where the field's history is kept between sessions. Not private, so that a test can put back what a
          * run of it leaves in the application's own properties.

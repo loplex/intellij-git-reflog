@@ -1,6 +1,5 @@
 package cz.loplex.reflog.actions
 
-import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -106,11 +105,11 @@ internal class GitReflogDiffModeSwitch : ComboBoxAction(), DumbAware {
         // Nothing on offer is a state of its own, and the switch says so rather than naming the mode that was
         // picked: there is no comparison on screen for it to be naming.
         e.presentation.isEnabled = modes != null && modes.applicable.isNotEmpty()
-        // The short name, the icon saying what it is a choice between. Written out as "Compare: Against Working
-        // Tree" the switch outgrew the pane it sits on, and a label too long to fit is not shortened by a toolbar
-        // - it is dropped, until the mouse goes looking for it.
+        // The short name on its own. Written out as "Compare: Against Working Tree" the switch outgrew the pane
+        // it sits on, and a label too long to fit is not shortened by a toolbar - it is dropped, until the mouse
+        // goes looking for it. No icon either: the arrow already says this is a choice, and no icon for "what
+        // these files are being compared as" reads as that rather than as some diff to be opened.
         e.presentation.text = shown?.let(::shortTitleOf) ?: GitReflogBundle.message("reflog.diff.mode.none")
-        e.presentation.icon = AllIcons.Actions.DiagramDiff
         // The tooltip is where the full name lives, alongside what the reading actually compares.
         e.presentation.description = shown?.let {
             GitReflogBundle.message(
