@@ -44,8 +44,10 @@ internal data class GitReflogSelection(
     val chronological: List<GitReflogEntry> get() = selected.sortedByDescending { positionOf(it) }
 
     /**
-     * A stash reflog is a stack of unrelated entries rather than a timeline of one state, so the modes that read
-     * it as a timeline have nothing to say about it.
+     * Whether this reflog is a timeline of one state moving, rather than a stack of unrelated entries.
+     *
+     * A stash is the stack: nothing in it moved anything onto anything else, so the readings that ask what a
+     * movement did have nothing to say about it. What its entries hold can still be read and merged.
      */
     val isTimeline: Boolean get() = ref.kind != GitReflogRef.Kind.STASH
 
@@ -89,8 +91,9 @@ internal enum class GitReflogDiffMode {
     /**
      * Whether this mode has an answer for [selection].
      *
-     * [ancestry] only ever matters to [UNION]: merging the diffs of commits that sit on branches which never met
-     * produces a tree of changes that undo one another, which is worse than no answer at all.
+     * [ancestry] only ever matters to [UNION], and only for a timeline: merging the diffs of commits that sit on
+     * branches which never met produces a tree of changes that undo one another, which is worse than no answer at
+     * all.
      */
     fun isApplicableTo(selection: GitReflogSelection, ancestry: GitReflogAncestry): Boolean {
         val count = selection.selected.size
@@ -100,7 +103,12 @@ internal enum class GitReflogDiffMode {
             REFLOG_STEP -> selection.isTimeline && selection.beforeOldest != null
             BETWEEN_SELECTED -> selection.isTimeline && count >= 2
             // A single commit against its parent is the one reading that never needs the graph walked.
-            UNION -> count == 1 || ancestry != GitReflogAncestry.DIVERGED
+            //
+            // Nor does a stash. Its entries are independent sets of work over a common base, all of them
+            // forward changes, so merging several is a union of what they hold rather than a pile of changes
+            // undoing one another - which is what the graph is consulted about. That two stash entries are not
+            // ancestors of one another is true of every pair of them, and so says nothing about this pair.
+            UNION -> count == 1 || !selection.isTimeline || ancestry != GitReflogAncestry.DIVERGED
             WORKING_TREE -> count == 1
         }
     }
@@ -131,7 +139,8 @@ internal enum class GitReflogDiffMode {
     /**
      * The mode to actually show for [selection]: this one where it fits, otherwise the nearest one that does.
      *
-     * Null where nothing fits, which a stash reflog with more than one entry selected is the honest case of.
+     * Null where nothing fits, which with anything selected at all no longer happens: every selection has at
+     * least the reading that merges what its entries changed.
      *
      * The chosen mode is not rewritten by this - what the user picked stays picked, and comes back as soon as a
      * selection it suits is made again.

@@ -40,8 +40,7 @@ class GitReflogShowDiffModesTest : BasePlatformTestCase() {
             updated(GitReflogShowDiffAction(), contextOf(several)).isEnabled,
         )
 
-        val stash = GitReflogSelection(STASH, entries, listOf(onBranch, onMaster))
-        val nothingFits = GitReflogDiffModes.of(GitReflogDiffMode.REFLOG_STEP, stash, GitReflogAncestry.DIVERGED)
+        val nothingFits = modesFor(GitReflogAncestry.LINEAR)
         assertFalse(
             "Show Diff is offered where the file pane is showing nothing",
             updated(GitReflogShowDiffAction(), contextOf(nothingFits)).isEnabled,
@@ -99,14 +98,30 @@ class GitReflogShowDiffModesTest : BasePlatformTestCase() {
         )
     }
 
-    /** Nothing fitting at all - a stash pair - leaves the submenu off the menu, as it leaves Compare off it. */
+    /** Nothing selected leaves the submenu off the menu, as it leaves Compare off it. */
     fun `test the submenu is withheld where no reading fits`() {
+        assertFalse(
+            "The readings are offered with nothing selected",
+            updated(GitReflogShowDiffModeGroup(), contextOf(modesFor(GitReflogAncestry.LINEAR))).isEnabledAndVisible,
+        )
+    }
+
+    /** A stash pair has one reading, so the submenu is there - with the three that do not fit greyed. */
+    fun `test a stash pair is offered the reading that merges what it holds`() {
         val stash = GitReflogSelection(STASH, entries, listOf(onBranch, onMaster))
         val modes = GitReflogDiffModes.of(GitReflogDiffMode.REFLOG_STEP, stash, GitReflogAncestry.DIVERGED)
 
-        assertFalse(
-            "The readings are offered for a selection none of them fits",
+        assertTrue(
+            "The readings are withheld for a stash pair, which has one",
             updated(GitReflogShowDiffModeGroup(), contextOf(modes)).isEnabledAndVisible,
+        )
+        assertTrue(
+            "What the stash entries hold cannot be opened",
+            updated(GitReflogShowDiffInModeAction(GitReflogDiffMode.UNION), contextOf(modes)).isEnabled,
+        )
+        assertFalse(
+            "A stash is read as a timeline after all",
+            updated(GitReflogShowDiffInModeAction(GitReflogDiffMode.REFLOG_STEP), contextOf(modes)).isEnabled,
         )
     }
 

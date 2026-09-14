@@ -143,12 +143,10 @@ class GitReflogChangesTest : GitReflogRepositoryTest() {
 
     /**
      * A stash reflog is a stack of unrelated entries rather than a timeline of one state: nothing in it moved
-     * anything onto anything else, so several of them selected leave every reading without an answer.
-     *
-     * The two readings that treat a reflog as a timeline are ruled out by the ref alone; the one that merges
-     * commits is ruled out by the graph, and this is what says the graph really answers that way for stashes.
+     * anything onto anything else, so the readings that ask what a movement did have nothing to say. What the
+     * entries hold can still be merged, and that is what several of them selected are read as.
      */
-    fun `test several stash entries leave every reading without an answer`() {
+    fun `test several stash entries are merged into what they hold between them`() {
         commit("a.txt", "one", "Add a")
 
         File(projectNioRoot.toFile(), "a.txt").writeText("changed once")
@@ -161,12 +159,22 @@ class GitReflogChangesTest : GitReflogRepositoryTest() {
         assertEquals("The two stashes did not reach the reflog: $entries", 2, entries.size)
 
         val selection = GitReflogSelection(STASH, entries, entries)
-        // Neither stash was made on top of the other, so merging their commits is not on offer either.
+        // Neither stash was made on top of the other, which is true of every pair of them - and is why the graph
+        // is not what decides whether they can be merged.
         assertEquals(GitReflogAncestry.DIVERGED, readAncestry(repository, selection))
 
         val modes = GitReflogDiffModes.of(GitReflogDiffMode.REFLOG_STEP, selection, readAncestry(repository, selection))
-        assertTrue("A stash pair has a reading after all: ${modes.applicable}", modes.applicable.isEmpty())
-        assertNull("A stash pair has a reading on screen", modes.effective)
+        assertEquals(
+            "A stash pair is read as something other than what its entries hold",
+            listOf(GitReflogDiffMode.UNION),
+            modes.applicable,
+        )
+        assertEquals(GitReflogDiffMode.UNION, modes.effective)
+
+        // Both stashes touched a.txt, so the merge holds it once - the file is in the selection, whichever of
+        // them is asked about it.
+        val changes = readReflogChanges(project, repository, selection, GitReflogDiffMode.UNION)
+        assertEquals(setOf("a.txt"), namesOf(changes))
     }
 
     fun `test a single entry is linear without asking git`() {

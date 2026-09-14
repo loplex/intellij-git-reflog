@@ -149,8 +149,8 @@ internal class GitReflogDiffModeGroup : ActionGroup(), DumbAware {
 
     override fun update(e: AnActionEvent) {
         val modes = e.getData(GitReflogDataKeys.DIFF_MODES)
-        // Nothing fitting at all is the one case with no choice to offer - a stash reflog with several entries
-        // selected - and four greyed readings would explain it no better than the empty pane already does.
+        // Nothing fitting at all is the one case with no choice to offer - nothing selected - and four greyed
+        // readings would explain it no better than the empty pane already does.
         e.presentation.isEnabledAndVisible = modes != null && modes.applicable.isNotEmpty()
     }
 

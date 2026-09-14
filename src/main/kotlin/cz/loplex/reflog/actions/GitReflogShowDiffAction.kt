@@ -42,8 +42,8 @@ internal class GitReflogShowDiffAction : DumbAwareAction() {
     override fun update(e: AnActionEvent) {
         val shown = e.getData(GitReflogDataKeys.DIFF_MODES)?.effective
 
-        // Enabled on there being a comparison on screen at all, which a stash with several entries selected has
-        // none of - and where there is nothing to look at, there is nothing to open.
+        // Enabled on there being a comparison on screen at all, which only an empty selection has none of - and
+        // where there is nothing to look at, there is nothing to open.
         e.presentation.isEnabled = shown != null
         // Named for the reading it will open. "Show Diff" on its own says which of four only if the file pane is
         // there to be looked at, and the file pane is one of the things this tab lets you put away.
@@ -98,8 +98,8 @@ internal class GitReflogShowDiffInModeAction(private val mode: GitReflogDiffMode
 /**
  * The four readings, as a submenu under Show Diff.
  *
- * Withheld entirely where nothing fits - a stash reflog with several entries selected - for the same reason
- * Compare withholds itself there: four greyed readings explain that case no better than their absence does.
+ * Withheld entirely where nothing fits, which is to say with nothing selected, for the same reason Compare
+ * withholds itself there: four greyed readings explain an empty table no better than their absence does.
  */
 internal class GitReflogShowDiffModeGroup : ActionGroup(), DumbAware {
 

@@ -529,8 +529,8 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             .onSuccess { outcome ->
                 ancestry = outcome.ancestry
                 val mode = outcome.mode
-                // Nothing fits a stash reflog with more than one entry selected, and nothing is what it gets.
-                if (mode == null) changesPanel.showEmptyText(GitReflogBundle.message("reflog.changes.one.only"))
+                // Nothing fits a selection with nothing in it, which is what the pane says in its own words.
+                if (mode == null) changesPanel.showEmptyText(GitReflogBundle.message("reflog.changes.none.selected"))
                 else changesPanel.setChanges(outcome.changes, emptyTextFor(selection, mode))
             }
             .onFailure { error ->

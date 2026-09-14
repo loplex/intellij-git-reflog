@@ -91,15 +91,27 @@ class GitReflogDiffModeActionsTest : BasePlatformTestCase() {
     }
 
     /**
-     * A stash reflog is a stack of unrelated entries rather than a timeline, so several of them selected leave
-     * every reading without an answer - which the switch says outright rather than naming a mode it is not showing.
+     * Several stash entries are read as what they hold between them, the readings that ask what a movement did
+     * having nothing to say about a stack of unrelated entries.
      */
-    fun `test several stash entries leave nothing to compare`() {
+    fun `test several stash entries are read as what they hold`() {
         val stash = GitReflogSelection(STASH, entries, listOf(onBranch, onMaster))
         val modes = GitReflogDiffModes.of(GitReflogDiffMode.REFLOG_STEP, stash, GitReflogAncestry.DIVERGED)
 
-        assertTrue("A stash pair has a reading after all: ${modes.applicable}", modes.applicable.isEmpty())
-        assertNull("A stash pair has a reading on screen", modes.effective)
+        assertEquals("A stash pair is read as something else", listOf(GitReflogDiffMode.UNION), modes.applicable)
+        assertEquals(GitReflogDiffMode.UNION, modes.effective)
+        assertEquals("Commits", updated(GitReflogDiffModeSwitch(), modes).text)
+    }
+
+    /**
+     * Nothing selected is the one case with no comparison to name - and the switch says so outright rather than
+     * naming the mode that was picked, there being no comparison on screen for it to be naming.
+     */
+    fun `test an empty selection leaves nothing to compare`() {
+        val modes = modesFor(GitReflogDiffMode.REFLOG_STEP, GitReflogAncestry.LINEAR)
+
+        assertTrue("Something is on offer with nothing selected: ${modes.applicable}", modes.applicable.isEmpty())
+        assertNull("A comparison is on screen with nothing selected", modes.effective)
 
         val presentation = updated(GitReflogDiffModeSwitch(), modes)
         assertFalse("The switch offers a reading it has none of", presentation.isEnabled)

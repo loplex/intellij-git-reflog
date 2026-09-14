@@ -106,11 +106,28 @@ class GitReflogDiffModeTest {
         )
     }
 
+    /**
+     * Several stash entries are merged rather than read as a timeline: the readings that ask what a movement did
+     * step aside for the one that asks what the entries hold.
+     *
+     * Their not being ancestors of one another does not rule that out, which it would on a timeline - it is true
+     * of every pair of stash entries, so it says nothing about any particular pair.
+     */
     @Test
-    fun `several entries of a stash reflog leave nothing to show`() {
+    fun `several entries of a stash reflog are merged rather than read as a step`() {
         val selection = GitReflogSelection(STASH, entries, listOf(commit, reset))
 
-        assertNull(GitReflogDiffMode.REFLOG_STEP.effectiveFor(selection, GitReflogAncestry.DIVERGED))
+        assertEquals(
+            GitReflogDiffMode.UNION,
+            GitReflogDiffMode.REFLOG_STEP.effectiveFor(selection, GitReflogAncestry.DIVERGED),
+        )
+        assertTrue(applies(GitReflogDiffMode.UNION, selection))
+    }
+
+    /** With nothing selected there is nothing to compare, which is the one case that leaves no reading at all. */
+    @Test
+    fun `an empty selection leaves nothing to show`() {
+        assertNull(GitReflogDiffMode.REFLOG_STEP.effectiveFor(selection(), GitReflogAncestry.LINEAR))
     }
 
     @Test
