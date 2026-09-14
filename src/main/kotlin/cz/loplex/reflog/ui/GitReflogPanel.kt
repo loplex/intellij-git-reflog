@@ -26,7 +26,10 @@ import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.PopupHandler
 import com.intellij.ui.ScrollPaneFactory
+import com.intellij.ui.JBColor
 import com.intellij.ui.SearchTextField
+import com.intellij.ui.SeparatorComponent
+import com.intellij.ui.SeparatorOrientation
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.TableUtil
 import com.intellij.ui.components.JBLabel
@@ -371,6 +374,13 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             isOpaque = false
             add(countLabel)
             add(loadMoreLink)
+            // What has been read on one side, what to do with the tab on the other. The toolbar drew this line
+            // itself while Load More was an action on it; drawn here it also stands when Load More is hidden,
+            // the count on its left being reason enough to keep the two halves of the row apart.
+            add(
+                SeparatorComponent(JBColor.border(), SeparatorOrientation.VERTICAL)
+                    .apply { setVGap(JBUI.scale(SEPARATOR_INSET)) },
+            )
             add(actions.component)
         }
         return JPanel(BorderLayout()).apply {
@@ -731,6 +741,8 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         private const val CONTEXT_MENU_PLACE = "GitReflogPopup"
         private const val CONTEXT_MENU_GROUP_ID = "GitReflog.ContextMenu"
         private const val SEARCH_FIELD_COLUMNS = 16
+        /** How far the separator between the two halves of the toolbar row stops short of it, top and bottom. */
+        private const val SEPARATOR_INSET = 3
         /**
          * Where the field's history is kept between sessions. Not private, so that a test can put back what a
          * run of it leaves in the application's own properties.
