@@ -1,5 +1,6 @@
 package cz.loplex.reflog.actions
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -22,6 +23,25 @@ internal fun titleOf(mode: GitReflogDiffMode): String = GitReflogBundle.message(
         GitReflogDiffMode.BETWEEN_SELECTED -> "reflog.diff.mode.between"
         GitReflogDiffMode.UNION -> "reflog.diff.mode.union"
         GitReflogDiffMode.WORKING_TREE -> "reflog.diff.mode.working.tree"
+    },
+)
+
+/**
+ * Name of [mode] as the switch writes it, which is shorter than what the menu writes.
+ *
+ * The switch stands on the file pane's toolbar, which is as narrow as the file pane - and that pane gets what the
+ * table leaves it, which is not much. A name that does not fit is a name that is not shown at all until the mouse
+ * goes looking for it, so the switch says the shortest thing that still tells the four apart, and the icon beside
+ * it carries what the word "Compare" was carrying.
+ *
+ * The menu has room and keeps the full names, which is where a reading being met for the first time is read.
+ */
+internal fun shortTitleOf(mode: GitReflogDiffMode): String = GitReflogBundle.message(
+    when (mode) {
+        GitReflogDiffMode.REFLOG_STEP -> "reflog.diff.mode.step.short"
+        GitReflogDiffMode.BETWEEN_SELECTED -> "reflog.diff.mode.between.short"
+        GitReflogDiffMode.UNION -> "reflog.diff.mode.union.short"
+        GitReflogDiffMode.WORKING_TREE -> "reflog.diff.mode.working.tree.short"
     },
 )
 
@@ -86,12 +106,19 @@ internal class GitReflogDiffModeSwitch : ComboBoxAction(), DumbAware {
         // Nothing on offer is a state of its own, and the switch says so rather than naming the mode that was
         // picked: there is no comparison on screen for it to be naming.
         e.presentation.isEnabled = modes != null && modes.applicable.isNotEmpty()
-        // Named as well as valued, the way the tab's own filters read "Ref: HEAD": on its own, "Reflog Step"
-        // says nothing about what it is a choice between.
-        e.presentation.text = shown
-            ?.let { GitReflogBundle.message("reflog.diff.mode.label", titleOf(it)) }
-            ?: GitReflogBundle.message("reflog.diff.mode.none")
-        e.presentation.description = shown?.let(::descriptionOf)
+        // The short name, the icon saying what it is a choice between. Written out as "Compare: Against Working
+        // Tree" the switch outgrew the pane it sits on, and a label too long to fit is not shortened by a toolbar
+        // - it is dropped, until the mouse goes looking for it.
+        e.presentation.text = shown?.let(::shortTitleOf) ?: GitReflogBundle.message("reflog.diff.mode.none")
+        e.presentation.icon = AllIcons.Actions.DiagramDiff
+        // The tooltip is where the full name lives, alongside what the reading actually compares.
+        e.presentation.description = shown?.let {
+            GitReflogBundle.message(
+                "reflog.diff.mode.tooltip",
+                GitReflogBundle.message("reflog.diff.mode.label", titleOf(it)),
+                descriptionOf(it),
+            )
+        }
     }
 
     /**

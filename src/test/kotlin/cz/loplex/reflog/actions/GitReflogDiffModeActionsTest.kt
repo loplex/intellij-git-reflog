@@ -52,13 +52,40 @@ class GitReflogDiffModeActionsTest : BasePlatformTestCase() {
         assertTrue("The switch would drop what it cannot offer", GitReflogDiffModeSwitch().shouldShowDisabledActions())
     }
 
-    /** The switch names the reading on screen, the way the tab's own filters read "Ref: HEAD". */
-    fun `test the switch names the reading it is showing`() {
+    /**
+     * The switch names the reading on screen - in short, the file pane's toolbar being as narrow as the file
+     * pane, with the full name kept for the tooltip and for the menu.
+     */
+    fun `test the switch names the reading it is showing, in short`() {
         val modes = modesFor(GitReflogDiffMode.REFLOG_STEP, GitReflogAncestry.DIVERGED, onBranch, onMaster)
 
         val presentation = updated(GitReflogDiffModeSwitch(), modes)
         assertTrue("The switch is greyed for a selection two readings fit", presentation.isEnabled)
-        assertEquals("Compare: Reflog Step", presentation.text)
+        assertEquals("Reflog Step", presentation.text)
+        assertNotNull("The switch carries no icon to say what it is a choice between", presentation.icon)
+    }
+
+    /**
+     * What the short name leaves out is in the tooltip: the full name, said as the choice it is, and what the
+     * reading actually compares.
+     */
+    fun `test the tooltip carries the full name and what it compares`() {
+        val modes = modesFor(GitReflogDiffMode.WORKING_TREE, GitReflogAncestry.LINEAR, onMaster)
+
+        val description = updated(GitReflogDiffModeSwitch(), modes).description
+        assertNotNull("The switch says nothing on hover", description)
+        assertTrue("The tooltip does not name the reading in full: $description", "Compare: Against Working Tree" in description!!)
+        assertTrue("The tooltip does not say what is compared: $description", "working tree" in description)
+    }
+
+    /** The menu has the room the switch has not, and keeps the names a reading is first met under. */
+    fun `test the menu keeps the full names`() {
+        val modes = modesFor(GitReflogDiffMode.REFLOG_STEP, GitReflogAncestry.LINEAR, onMaster)
+
+        assertEquals(
+            listOf("Reflog Step", "Between Selected", "Selected Commits", "Against Working Tree"),
+            childrenOf(modes).map { updated(it, contextOf(modes)).text },
+        )
     }
 
     /**
@@ -94,7 +121,7 @@ class GitReflogDiffModeActionsTest : BasePlatformTestCase() {
 
         assertEquals("The picked mode was rewritten by the fallback", GitReflogDiffMode.REFLOG_STEP, modes.preferred)
         assertEquals(GitReflogDiffMode.UNION, modes.effective)
-        assertEquals("Compare: Selected Commits", updated(GitReflogDiffModeSwitch(), modes).text)
+        assertEquals("Commits", updated(GitReflogDiffModeSwitch(), modes).text)
 
         // The tick follows what is on screen rather than what was picked, or the switch would name one reading
         // and tick another.

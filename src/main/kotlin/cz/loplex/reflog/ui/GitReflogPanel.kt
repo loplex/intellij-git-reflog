@@ -109,6 +109,8 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      */
     private val loadMoreLink = ActionLink(GitReflogBundle.message("reflog.load.more")) { loadMore() }.apply {
         toolTipText = GitReflogBundle.message("reflog.load.more.tooltip")
+        // Carried here rather than by the row, so that the space in front of it is hidden along with it.
+        border = JBUI.Borders.emptyLeft(LINK_GAP_BEFORE)
         isVisible = false
     }
     private val repositoryFilter = RepositoryFilter()
@@ -370,7 +372,10 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             add(searchField)
             filters.forEach { add(it.initUi()) }
         }
-        val right = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), JBUI.scale(2))).apply {
+        // No gap of the row's own: the toolbar at the end of it brings an inset already, so a gap shared out
+        // evenly leaves the separator further from the icons than from the count. Each piece carries the space it
+        // wants on its left instead, which also means the space in front of Load More goes away with Load More.
+        val right = JPanel(FlowLayout(FlowLayout.RIGHT, 0, JBUI.scale(2))).apply {
             isOpaque = false
             add(countLabel)
             add(loadMoreLink)
@@ -384,6 +389,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             add(
                 JSeparator(SwingConstants.VERTICAL).apply {
                     preferredSize = Dimension(preferredSize.width, JBUI.scale(SEPARATOR_HEIGHT))
+                    border = JBUI.Borders.empty(0, SEPARATOR_GAP_BEFORE, 0, SEPARATOR_GAP_AFTER)
                 },
             )
             add(actions.component)
@@ -748,6 +754,10 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         private const val SEARCH_FIELD_COLUMNS = 16
         /** How tall the line between the two halves of the toolbar row stands, the row lending it none. */
         private const val SEPARATOR_HEIGHT = 16
+        private const val LINK_GAP_BEFORE = 8
+        private const val SEPARATOR_GAP_BEFORE = 8
+        /** Smaller than the gap before it: the toolbar that follows brings an inset of its own. */
+        private const val SEPARATOR_GAP_AFTER = 2
         /**
          * Where the field's history is kept between sessions. Not private, so that a test can put back what a
          * run of it leaves in the application's own properties.
