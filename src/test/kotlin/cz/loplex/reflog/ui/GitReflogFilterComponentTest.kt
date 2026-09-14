@@ -44,6 +44,34 @@ class GitReflogFilterComponentTest : BasePlatformTestCase() {
         assertEquals("The filter did not redraw", 1, redrawn)
     }
 
+    /**
+     * A click on a filter whose popup is up closes that popup first, being a click outside it, and only then
+     * reaches the component that opens one. Opening again at that point puts the popup back on the very click
+     * that dismissed it, which reads as a flicker - or as a mouse that has taken to double-clicking.
+     */
+    fun `test a popup is not reopened by the click that closed it`() {
+        assertFalse(
+            "A popup would be put back by the click that dismissed it",
+            GitReflogFilterComponent.shouldOpenPopup(now = 1_000, closedAt = 950, oneIsOpen = false),
+        )
+    }
+
+    /** A second popup over one that is still up is the same thing arriving the other way round. */
+    fun `test a second popup is not opened over one already up`() {
+        assertFalse(
+            "A popup would be opened over a popup",
+            GitReflogFilterComponent.shouldOpenPopup(now = 10_000, closedAt = 0, oneIsOpen = true),
+        )
+    }
+
+    /** Closing a popup and meaning to open it again is a thing a user does, and is never refused. */
+    fun `test a popup asked for later is opened`() {
+        assertTrue(
+            "A filter refuses to open its popup a second time",
+            GitReflogFilterComponent.shouldOpenPopup(now = 10_000, closedAt = 1_000, oneIsOpen = false),
+        )
+    }
+
     private fun filter() = TestFilter()
 
     /**

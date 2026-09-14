@@ -75,8 +75,7 @@ internal abstract class GitReflogFilterComponent(name: Supplier<String>) :
      * previous popup is still up, one for an opening that treads on the heels of its closing.
      */
     private fun showPopup() {
-        if (openPopup?.isDisposed == false) return
-        if (System.currentTimeMillis() - popupClosedAt < REOPEN_GUARD_MS) return
+        if (!shouldOpenPopup(System.currentTimeMillis(), popupClosedAt, openPopup?.isDisposed == false)) return
 
         val popup = JBPopupFactory.getInstance()
             .createActionGroupPopup(
@@ -96,9 +95,18 @@ internal abstract class GitReflogFilterComponent(name: Supplier<String>) :
         popup.showUnderneathOf(this)
     }
 
-    private companion object {
+    companion object {
         /** What [FilterComponent] itself puts between the name and the value of a filter that counts as set. */
         const val NAME_SEPARATOR = ": "
+
+        /**
+         * Whether a popup asked for now is one to open, or the tail of the click that has just dismissed one.
+         *
+         * A decision of its own so that it can be asked without a popup to ask it of - the two ways a popup is
+         * asked for twice over being easy to get one way round and not the other.
+         */
+        fun shouldOpenPopup(now: Long, closedAt: Long, oneIsOpen: Boolean): Boolean =
+            !oneIsOpen && now - closedAt >= REOPEN_GUARD_MS
 
         /**
          * How soon after a popup closed an opening is taken to be the same click that closed it.

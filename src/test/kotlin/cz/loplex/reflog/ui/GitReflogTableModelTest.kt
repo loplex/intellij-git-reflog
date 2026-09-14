@@ -48,6 +48,46 @@ class GitReflogTableModelTest : BasePlatformTestCase() {
         assertTrue("A column asked for no width of its own: $widths", widths.all { it > 0 })
     }
 
+    /**
+     * The two columns drawn in the muted style answer the selection the same way the plain ones do.
+     *
+     * A renderer of that kind picks its own background, and the one it picks dims when the table loses focus,
+     * where the columns the table draws for itself do not - so clicking away turned a selected row two-tone,
+     * these two dimming while the other five stayed put. Whether a table ought to dim a selection it has lost
+     * the focus for has an answer either way; what it cannot do is answer differently along one row.
+     */
+    fun `test the muted columns take their background from the table`() {
+        val model = GitReflogTableModel()
+        model.items = listOf(entry)
+        val table = TableView(model)
+
+        for (column in listOf(COLUMN_COMMIT, COLUMN_AUTHOR)) {
+            assertEquals(
+                "Column $column paints a selected row its own colour",
+                table.selectionBackground,
+                backgroundAt(table, model, column, selected = true),
+            )
+            assertEquals(
+                "Column $column paints an unselected row its own colour",
+                table.background,
+                backgroundAt(table, model, column, selected = false),
+            )
+        }
+    }
+
+    private fun backgroundAt(
+        table: TableView<GitReflogEntry>,
+        model: GitReflogTableModel,
+        column: Int,
+        selected: Boolean,
+    ): java.awt.Color {
+        val renderer = model.columnInfos[column].getRenderer(entry)
+            ?: throw AssertionError("Column $column has no renderer of its own")
+        // hasFocus is the focus of the cell, and false is what a row that is merely selected gets.
+        val component = renderer.getTableCellRendererComponent(table, valueAt(model, column), selected, false, 0, column)
+        return component.background
+    }
+
     private fun valueAt(model: GitReflogTableModel, column: Int): String = model.getValueAt(0, column) as String
 
     private companion object {

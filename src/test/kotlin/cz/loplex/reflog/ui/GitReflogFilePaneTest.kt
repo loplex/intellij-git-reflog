@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserBase
+import com.intellij.ui.OnePixelSplitter
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import javax.swing.JPanel
@@ -80,6 +81,31 @@ class GitReflogFilePaneTest : BasePlatformTestCase() {
             "Starting a read wrote over what the pane was showing",
             PREVIOUS_ANSWER,
             browser!!.viewer.emptyText.text,
+        )
+    }
+
+    /**
+     * Neither side of the splitter can be dragged shut.
+     *
+     * Dragged to the edge the file pane closed to nothing, which leaves a handle where a pane had been and no
+     * way to tell what became of it - where the toolbar has a button for putting the pane away that says so
+     * plainly, and remembers it for the next session besides.
+     */
+    fun testNeitherPaneCanBeDraggedShut() {
+        val pane = GitReflogChangesPanel(project, JPanel())
+        Disposer.register(testRootDisposable, pane)
+
+        val splitter = UIUtil.findComponentOfType(pane, OnePixelSplitter::class.java)
+        assertNotNull("The tab has no splitter between the table and the file pane", splitter)
+        assertTrue("The splitter would close a pane to nothing", splitter!!.isHonorMinimumSize)
+
+        assertTrue(
+            "The table may be dragged shut: ${splitter.firstComponent.minimumSize}",
+            splitter.firstComponent.minimumSize.width > 0,
+        )
+        assertTrue(
+            "The file pane may be dragged shut: ${splitter.secondComponent.minimumSize}",
+            splitter.secondComponent.minimumSize.width > 0,
         )
     }
 
