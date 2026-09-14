@@ -18,8 +18,13 @@ import javax.swing.table.TableCellRenderer
 internal class GitReflogTableModel : ListTableModel<GitReflogEntry>(*COLUMNS) {
 
     /**
-     * Applies the columns' preferred widths. Only preferred widths are set, so that the columns stay resizable
-     * and the description column keeps absorbing the remaining space.
+     * Applies the columns' preferred widths.
+     *
+     * Only preferred widths are set, which keeps every column resizable by hand. It does not, however, hand the
+     * leftover width to the description column: with no maximum set on any of them, the table's own layout
+     * shares a widened window out among all the columns in proportion to what each asked for, so a column whose
+     * content is usually a word - the action - grows along with the ones holding sentences. Capping the columns
+     * whose content has a known bound would settle that, at the cost of no longer being able to drag them wider.
      */
     fun applyColumnWidths(table: JTable) {
         COLUMNS.forEachIndexed { index, column ->

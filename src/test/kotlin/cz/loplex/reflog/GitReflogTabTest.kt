@@ -7,6 +7,7 @@ import com.intellij.openapi.vcs.changes.ui.ChangesViewContentEP
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import cz.loplex.reflog.ui.GitReflogContentProvider
 import cz.loplex.reflog.ui.GitReflogPanel
+import cz.loplex.reflog.ui.countTextFor
 
 /**
  * Covers what only shows up once the descriptor is loaded: the tab has to reach the Git tool window, and the
@@ -48,6 +49,23 @@ class GitReflogTabTest : BasePlatformTestCase() {
         assertNotNull(actionManager.getAction("Vcs.RepositoryChangesBrowserToolbar"))
         assertNotNull(actionManager.getAction("Vcs.RepositoryChangesBrowserMenu"))
         assertNotNull(actionManager.getAction(ChangesTree.GROUP_BY_ACTION_GROUP))
+    }
+
+    /**
+     * What the label beside Load More says in each of the four states it can be in.
+     *
+     * The last of them is why it exists: with everything read and nothing filtered out the label said nothing,
+     * so the click that finished the reading took away the button and the count together and left the row with
+     * less in it than before.
+     */
+    fun testTheCountSaysHowMuchOfTheReflogIsOnScreen() {
+        // Counts below a thousand throughout: the numbers are formatted for the locale, and a grouping separator
+        // would be asserting the locale of whatever machine runs this rather than what the label says.
+        assertEquals("Reading more says how far the read got", "Showing 500 of the newest 500 entries read", countTextFor(500, 500, hasMore = true))
+        assertEquals("A filter says how much it left", "Showing 12 of 137", countTextFor(12, 137, hasMore = false))
+        assertEquals("The whole reflog says that it is the whole reflog", "Showing all 137 entries", countTextFor(137, 137, hasMore = false))
+        // An empty reflog is said by the table standing empty with its own words in it.
+        assertEquals("An empty reflog is counted twice over", "", countTextFor(0, 0, hasMore = false))
     }
 
     fun testPanelBuildsWithoutAnyRepository() {

@@ -62,6 +62,23 @@ import javax.swing.event.DocumentEvent
  * Content of the Reflog tab: the reflog of one ref of one repository, plus the toolbar that picks what is read
  * and the filters that narrow what of it is shown.
  */
+/**
+ * What the label beside Load More says about how much of the reflog is on screen.
+ *
+ * The case worth naming is the last one: with the whole reflog read and nothing filtered out, the label used to
+ * say nothing at all. Load More then took both itself and the count away on the click that finished the reading,
+ * leaving the row emptier than before and no answer to whether anything had happened. Saying that this is all of
+ * it puts the answer where the button had been.
+ */
+internal fun countTextFor(shown: Int, total: Int, hasMore: Boolean): String = when {
+    // Nothing read is said by the table itself, which stands empty with its own words in it.
+    total == 0 -> ""
+    // Once the read hits its limit, the number of entries is a property of the limit, not of the reflog.
+    hasMore -> GitReflogBundle.message("reflog.count.capped", shown, total)
+    shown != total -> GitReflogBundle.message("reflog.count.filtered", shown, total)
+    else -> GitReflogBundle.message("reflog.count.all", total)
+}
+
 internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPanel(true, true), Disposable {
 
     private val tableModel = GitReflogTableModel()
@@ -295,12 +312,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             entries.isEmpty() -> GitReflogBundle.message("reflog.status.empty")
             else -> GitReflogBundle.message("reflog.status.no.match")
         }
-        countLabel.text = when {
-            // Once the read hits its limit, the number of entries is a property of the limit, not of the reflog.
-            hasMore -> GitReflogBundle.message("reflog.count.capped", shown.size, entries.size)
-            shown.size != entries.size -> GitReflogBundle.message("reflog.count.filtered", shown.size, entries.size)
-            else -> ""
-        }
+        countLabel.text = countTextFor(shown.size, entries.size, hasMore)
 
         updateFilters()
     }
