@@ -170,7 +170,15 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
         }
     }
 
-    private companion object {
+    companion object {
+        /**
+         * Where the placement of the two panes is kept between sessions. Not private, so that a test can put back
+         * what a run of it leaves in the application's own properties.
+         */
+        const val SHOW_FILE_PANE: String = "GitReflog.showFilePane"
+        const val SHOW_DIFF_PREVIEW: String = "GitReflog.showDiffPreview"
+        const val DIFF_PREVIEW_AT_BOTTOM: String = "GitReflog.diffPreviewAtBottom"
+
         /**
          * Place of the diff viewer. A place of its own rather than the Log's, so that the settings the diff
          * toolbar writes - ignore whitespace, the viewer to use - belong to this tab instead of following the Log.
@@ -178,9 +186,6 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
         const val DIFF_PLACE = "GitReflogDiffPreview"
         const val FILES_SPLITTER_PROPORTION = "GitReflog.files.splitter.proportion"
         const val DIFF_SPLITTER_PROPORTION = "GitReflog.diff.splitter.proportion"
-        const val SHOW_FILE_PANE = "GitReflog.showFilePane"
-        const val SHOW_DIFF_PREVIEW = "GitReflog.showDiffPreview"
-        const val DIFF_PREVIEW_AT_BOTTOM = "GitReflog.diffPreviewAtBottom"
 
         /**
          * How long a read may take before it is worth saying that it is under way.
