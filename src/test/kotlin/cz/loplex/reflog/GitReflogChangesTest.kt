@@ -149,10 +149,70 @@ class GitReflogChangesTest : VcsPlatformTest() {
         )
     }
 
+    /**
+     * The oldest entry of the reflog records a movement whose starting state the reflog no longer holds, so the
+     * reading that spans it has nothing to read - and the one that steps in reads a commit with no parent, which
+     * is the case the reflog's own oldest entry always is.
+     */
+    fun `test the oldest entry is read by the reading that needs no state before it`() {
+        commit("a.txt", "one", "Add a")
+        commit("b.txt", "two", "Add b")
+
+        val entries = reflog()
+        val oldest = GitReflogSelection(GitReflogRef.HEAD, entries, listOf(entries.last()))
+
+        assertNull("The reflog reaches past its own oldest entry", oldest.beforeOldest)
+
+        val outcome = readChangesFor(project, repository, oldest, GitReflogDiffMode.REFLOG_STEP)
+
+        // Reflog Step steps aside for the reading that compares the commit with its own parent - of which the
+        // initial commit has none, so what it changed is everything it introduced.
+        assertEquals(GitReflogDiffMode.UNION, outcome.mode)
+        assertEquals(setOf("a.txt"), namesOf(outcome.changes))
+
+        // What was picked stays picked, so it comes back on the next selection that suits it.
+        val modes = GitReflogDiffModes.of(GitReflogDiffMode.REFLOG_STEP, oldest, outcome.ancestry)
+        assertEquals(GitReflogDiffMode.REFLOG_STEP, modes.preferred)
+        assertEquals(GitReflogDiffMode.UNION, modes.effective)
+        assertFalse("Reflog Step was left on offer for the oldest entry", GitReflogDiffMode.REFLOG_STEP in modes.applicable)
+    }
+
+    /**
+     * A stash reflog is a stack of unrelated entries rather than a timeline of one state: nothing in it moved
+     * anything onto anything else, so several of them selected leave every reading without an answer.
+     *
+     * The two readings that treat a reflog as a timeline are ruled out by the ref alone; the one that merges
+     * commits is ruled out by the graph, and this is what says the graph really answers that way for stashes.
+     */
+    fun `test several stash entries leave every reading without an answer`() {
+        commit("a.txt", "one", "Add a")
+
+        File(projectNioRoot.toFile(), "a.txt").writeText("changed once")
+        git("stash", "push", "--quiet", "-m", "first")
+        File(projectNioRoot.toFile(), "a.txt").writeText("changed twice")
+        git("stash", "push", "--quiet", "-m", "second")
+
+        repository.update()
+        val entries = GitReflogReader.readReflog(repository, STASH, GitReflogReader.PAGE_SIZE)
+        assertEquals("The two stashes did not reach the reflog: $entries", 2, entries.size)
+
+        val selection = GitReflogSelection(STASH, entries, entries)
+        // Neither stash was made on top of the other, so merging their commits is not on offer either.
+        assertEquals(GitReflogAncestry.DIVERGED, readAncestry(repository, selection))
+
+        val modes = GitReflogDiffModes.of(GitReflogDiffMode.REFLOG_STEP, selection, readAncestry(repository, selection))
+        assertTrue("A stash pair has a reading after all: ${modes.applicable}", modes.applicable.isEmpty())
+        assertNull("A stash pair has a reading on screen", modes.effective)
+    }
+
     fun `test a single entry is linear without asking git`() {
         commit("a.txt", "one", "Add a")
 
         assertEquals(GitReflogAncestry.LINEAR, readAncestry(repository, selectionOf(0)))
+    }
+
+    private companion object {
+        val STASH = GitReflogRef("refs/stash")
     }
 
     private fun read(mode: GitReflogDiffMode, selection: GitReflogSelection): List<Change> =
