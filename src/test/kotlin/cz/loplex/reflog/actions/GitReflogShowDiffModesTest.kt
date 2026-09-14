@@ -29,6 +29,25 @@ class GitReflogShowDiffModesTest : BasePlatformTestCase() {
         assertTrue("The readings are not on the table's context menu: $ids", "GitReflog.ShowDiffModes" in ids)
     }
 
+    /**
+     * Show Diff opens whatever the file pane is showing, so it answers a selection of any size - and says nothing
+     * about which reading that is, the pane beside it being the answer.
+     */
+    fun `test Show Diff follows the reading the pane is showing`() {
+        val several = modesFor(GitReflogAncestry.LINEAR, onMaster, onBranch)
+        assertTrue(
+            "Show Diff is refused a selection the file pane has an answer for",
+            updated(GitReflogShowDiffAction(), contextOf(several)).isEnabled,
+        )
+
+        val stash = GitReflogSelection(STASH, entries, listOf(onBranch, onMaster))
+        val nothingFits = GitReflogDiffModes.of(GitReflogDiffMode.REFLOG_STEP, stash, GitReflogAncestry.DIVERGED)
+        assertFalse(
+            "Show Diff is offered where the file pane is showing nothing",
+            updated(GitReflogShowDiffAction(), contextOf(nothingFits)).isEnabled,
+        )
+    }
+
     fun `test every reading can be opened in the diff viewer`() {
         assertEquals(
             GitReflogDiffMode.entries.map(::titleOf),

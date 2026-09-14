@@ -22,18 +22,36 @@ import cz.loplex.reflog.readReflogEntryChanges
 import git4idea.repo.GitRepository
 
 /**
- * Shows what the commit behind the selected reflog entry changed.
+ * Opens what the file pane is showing in the diff viewer.
+ *
+ * Which reading that is belongs to Compare, and this follows it: named on its own, "Show Diff" cannot say which
+ * of four comparisons it means, and it does not need to - the pane beside it is already showing the answer. Any
+ * of the other three is a submenu away.
+ *
+ * It used to read the selected entry against its own parent whatever Compare was set to, which on a checkout or
+ * a reset answered a different question than the pane did, and was in any case the same thing the submenu's
+ * "Selected Commits" does.
  *
  * Unlike jumping into the Log, this works for commits that no ref points to any more - the resets, amends and
- * rebases that are the very reason to open the reflog - because the changes are read straight from `git show`.
- *
- * This is the reading of a single entry against its own parent. The other three are opened from the submenu this
- * action heads, which is why it keeps its own name rather than borrowing one of theirs.
+ * rebases that are the very reason to open the reflog - because the changes are read straight from git.
  */
-internal class GitReflogShowDiffAction : GitReflogEntryAction() {
+internal class GitReflogShowDiffAction : DumbAwareAction() {
 
-    override fun perform(selection: GitReflogEntryTarget) {
-        showReflogEntryDiff(selection.project, selection.repository, selection.entry)
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
+
+    override fun update(e: AnActionEvent) {
+        // Enabled on there being a comparison on screen at all, which a stash with several entries selected has
+        // none of - and where there is nothing to look at, there is nothing to open.
+        e.presentation.isEnabled = e.getData(GitReflogDataKeys.DIFF_MODES)?.effective != null
+    }
+
+    override fun actionPerformed(e: AnActionEvent) {
+        val project = e.project ?: return
+        val repository = e.getData(GitReflogDataKeys.REPOSITORY) ?: return
+        val selection = e.getData(GitReflogDataKeys.SELECTION) ?: return
+        val mode = e.getData(GitReflogDataKeys.DIFF_MODES)?.effective ?: return
+
+        showReflogDiff(project, repository, selection, mode)
     }
 }
 
@@ -127,45 +145,6 @@ internal fun showReflogDiff(
             VcsNotifier.getInstance(project).notifyError(
                 FAILED_DIFF_NOTIFICATION_ID,
                 GitReflogBundle.message("reflog.diff.mode.failed.title", titleOf(mode)),
-                error.message.orEmpty(),
-            )
-        }
-    }
-    task.queue()
-}
-
-/**
- * Loads the changes of the commit [entry] points at and opens them in the diff viewer.
- */
-internal fun showReflogEntryDiff(project: Project, repository: GitRepository, entry: GitReflogEntry) {
-    val task = object : Task.Backgroundable(
-        project,
-        GitReflogBundle.message("reflog.diff.progress", entry.shortHash),
-        true,
-    ) {
-        private var changes: List<Change> = emptyList()
-
-        override fun run(indicator: ProgressIndicator) {
-            changes = readReflogEntryChanges(project, repository, entry)
-        }
-
-        override fun onSuccess() {
-            if (ShowDiffAction.canShowDiff(project, changes)) {
-                ShowDiffAction.showDiffForChange(project, changes)
-            }
-            else {
-                VcsNotifier.getInstance(project).notifyWarning(
-                    EMPTY_DIFF_NOTIFICATION_ID,
-                    GitReflogBundle.message("reflog.diff.empty.title"),
-                    GitReflogBundle.message("reflog.diff.empty.message", entry.shortHash),
-                )
-            }
-        }
-
-        override fun onThrowable(error: Throwable) {
-            VcsNotifier.getInstance(project).notifyError(
-                FAILED_DIFF_NOTIFICATION_ID,
-                GitReflogBundle.message("reflog.diff.failed.title", entry.shortHash),
                 error.message.orEmpty(),
             )
         }
