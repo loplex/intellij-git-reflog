@@ -5,7 +5,13 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vcs.changes.ui.ChangesTree
 import com.intellij.openapi.vcs.changes.ui.ChangesViewContentEP
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.openapi.vcs.changes.ui.ChangesViewContentManager
+import com.intellij.ui.content.ContentFactory
+import cz.loplex.reflog.ui.GitReflogContentPreloader
 import cz.loplex.reflog.ui.GitReflogContentProvider
+import cz.loplex.reflog.ui.GitReflogContentVisibilityPredicate
+import cz.loplex.reflog.ui.GitReflogDisplayNameSupplier
+import javax.swing.JPanel
 import cz.loplex.reflog.ui.GitReflogPanel
 import cz.loplex.reflog.ui.countTextFor
 
@@ -66,6 +72,36 @@ class GitReflogTabTest : BasePlatformTestCase() {
         assertEquals("The whole reflog says that it is the whole reflog", "Showing all 137 entries", countTextFor(137, 137, hasMore = false))
         // An empty reflog is said by the table standing empty with its own words in it.
         assertEquals("An empty reflog is counted twice over", "", countTextFor(0, 0, hasMore = false))
+    }
+
+    /**
+     * The tab is offered to a project that has Git among its active version control systems, and this project
+     * has none - so it is not offered here. The other half of the rule, a project that does have Git, needs a
+     * repository and is covered in [cz.loplex.reflog.GitReflogTabVisibilityTest].
+     */
+    fun testTheTabIsNotOfferedToAProjectWithoutGit() {
+        assertFalse(
+            "The tab is offered to a project with no Git in it",
+            GitReflogContentVisibilityPredicate().test(project),
+        )
+    }
+
+    /** The tab sits right behind the Log, which is the tab it complements rather than replaces. */
+    fun testTheTabIsPlacedBehindTheLog() {
+        val content = ContentFactory.getInstance().createContent(JPanel(), "Reflog", false)
+        Disposer.register(testRootDisposable, content)
+
+        GitReflogContentPreloader().preloadTabContent(content)
+
+        assertEquals(
+            ChangesViewContentManager.TabOrderWeight.VCS_LOG.weight + 1,
+            content.getUserData(ChangesViewContentManager.ORDER_WEIGHT_KEY),
+        )
+    }
+
+    /** The name the tab is looked up by has to be the name it is drawn under. */
+    fun testTheTabIsNamedWhatThePanelIsLookedUpBy() {
+        assertEquals(GitReflogPanel.TAB_NAME, GitReflogDisplayNameSupplier().get())
     }
 
     fun testPanelBuildsWithoutAnyRepository() {
