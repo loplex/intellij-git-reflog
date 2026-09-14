@@ -26,10 +26,7 @@ import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.PopupHandler
 import com.intellij.ui.ScrollPaneFactory
-import com.intellij.ui.JBColor
 import com.intellij.ui.SearchTextField
-import com.intellij.ui.SeparatorComponent
-import com.intellij.ui.SeparatorOrientation
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.TableUtil
 import com.intellij.ui.components.JBLabel
@@ -56,10 +53,13 @@ import git4idea.repo.GitRepositoryChangeListener
 import git4idea.repo.GitRepositoryManager
 import kotlinx.coroutines.Job
 import java.awt.BorderLayout
+import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.JSeparator
+import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 
 /**
@@ -377,9 +377,14 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             // What has been read on one side, what to do with the tab on the other. The toolbar drew this line
             // itself while Load More was an action on it; drawn here it also stands when Load More is hidden,
             // the count on its left being reason enough to keep the two halves of the row apart.
+            //
+            // Given a height outright, because a row laid out by its contents has none to lend: the platform's
+            // own SeparatorComponent asks for a height of zero when stood on end, on the expectation of being
+            // stretched by whatever holds it, and is drawn as a gap where nothing stretches it.
             add(
-                SeparatorComponent(JBColor.border(), SeparatorOrientation.VERTICAL)
-                    .apply { setVGap(JBUI.scale(SEPARATOR_INSET)) },
+                JSeparator(SwingConstants.VERTICAL).apply {
+                    preferredSize = Dimension(preferredSize.width, JBUI.scale(SEPARATOR_HEIGHT))
+                },
             )
             add(actions.component)
         }
@@ -741,8 +746,8 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         private const val CONTEXT_MENU_PLACE = "GitReflogPopup"
         private const val CONTEXT_MENU_GROUP_ID = "GitReflog.ContextMenu"
         private const val SEARCH_FIELD_COLUMNS = 16
-        /** How far the separator between the two halves of the toolbar row stops short of it, top and bottom. */
-        private const val SEPARATOR_INSET = 3
+        /** How tall the line between the two halves of the toolbar row stands, the row lending it none. */
+        private const val SEPARATOR_HEIGHT = 16
         /**
          * Where the field's history is kept between sessions. Not private, so that a test can put back what a
          * run of it leaves in the application's own properties.

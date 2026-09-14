@@ -194,12 +194,10 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
          * - the threshold Nielsen's response-time work puts on an operation feeling immediate, and the reason an
          * indicator below it costs more than it gives.
          *
-         * Measured rather than guessed at: reading the changes of an entry takes some 40-80 ms, so the read
-         * itself never reaches this. What does reach it is the two hops onto the EDT the read is wrapped in -
-         * one to say it has started, one to hand back what it found - which queue behind whatever the EDT is
-         * already doing. Stepping through the table with the arrow keys is exactly when it is busiest, which is
-         * how a third of a second turned out to be short enough to draw an indicator on every step and take it
-         * away again at once.
+         * In practice no ordinary read comes near it: reading the changes of an entry takes some 40-80 ms, so
+         * this indicator is never seen at all on a repository of any usual size. That is the intent rather than
+         * a waste - it is here for the read that has genuinely gone slow, and the list staying put underneath is
+         * what the panel is for the rest of the time.
          */
         const val LOADING_DELAY_MS = 1000
     }
