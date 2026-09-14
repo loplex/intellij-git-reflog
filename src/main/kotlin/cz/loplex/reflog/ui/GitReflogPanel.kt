@@ -627,7 +627,6 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         sink[GitReflogDataKeys.PANEL] = this
         sink[GitReflogDataKeys.REPOSITORY] = repository
         sink[GitReflogDataKeys.SELECTED_ENTRIES] = selected
-        sink[GitReflogDataKeys.HAS_MORE] = hasMore
         sink[GitReflogDataKeys.DIFF_MODES] = diffModes()
         sink[GitReflogDataKeys.SELECTION] = selection()
         sink[VcsDataKeys.VCS] = GitVcs.getKey()

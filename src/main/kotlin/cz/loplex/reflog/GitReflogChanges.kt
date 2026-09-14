@@ -163,8 +163,12 @@ internal fun readChangesFor(
     selection: GitReflogSelection,
     preferred: GitReflogDiffMode,
 ): GitReflogChangesResult {
+    // Asked of timelines only, and only of a selection of several: on a stash the answer is DIVERGED for every
+    // pair there has ever been, and no reading turns on it, so the walk would be a git call spent on a foregone
+    // conclusion nobody reads.
     val ancestry =
-        if (selection.selected.size >= 2) readAncestry(repository, selection) else GitReflogAncestry.LINEAR
+        if (selection.selected.size >= 2 && selection.isTimeline) readAncestry(repository, selection)
+        else GitReflogAncestry.LINEAR
     val mode = preferred.effectiveFor(selection, ancestry)
     val changes = mode?.let { readReflogChanges(project, repository, selection, it) } ?: emptyList()
 

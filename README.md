@@ -34,8 +34,10 @@ Stash entries are the exception to the Action/Description split: `git stash` wri
 `WIP on master: eddeef8 first`, where the colon separates the branch from the commit rather than an action from
 its details. The whole subject is kept as the description there and the Action column stays empty.
 
-The toolbar holds the ref selector, the action filter, the two diff pane buttons, Refresh, Load More where there
-is more to read, and, in projects with more than one Git repository, a repository selector. The filter field sits at the right end of the same row.
+The toolbar row holds the filter field first, then the ref selector, the action filter and - in projects with
+more than one Git repository - a repository selector. At the other end of the row stand the count of what has
+been read, a **Load More** link where there is more to read, and then the buttons that place the two panes and
+Refresh.
 
 The tab re-reads the reflog on its own whenever the state of the repository changes, which covers every operation
 that writes a reflog record. The selected entry survives such a re-read: it is recognised by what it records
@@ -67,17 +69,24 @@ the file pane's toolbar picks between them:
 | --- | --- | --- |
 | **Reflog Step** | What the selected movements did to the working tree, from the state before the oldest to the state after the newest | Any, as long as the reflog still holds the entry before the oldest selected one |
 | **Between Selected** | How the newest selected state differs from the oldest one, leaving out the movement that produced the oldest | Two or more entries |
-| **Selected Commits** | What each selected commit changed against its own parent, merged into one tree, as the Log answers a multiple selection | Any, and for more than one entry only where they sit on one line of history |
+| **Selected Commits** | What each selected commit changed against its own parent, merged into one tree, as the Log answers a multiple selection | Any on a stash; on a timeline, more than one entry only where they sit on one line of history |
 | **Against Working Tree** | How the working tree differs from the selected state | A single entry |
 
 Reflog Step is where the tab starts, and the one that sets the reflog apart from the Log: for a `commit` entry
 it is the commit's own diff, but for a `checkout` or a `reset` it is "what changed under me", which no diff
 against a parent can show.
 
-Two comparisons are deliberately withheld. A stash reflog is a stack of unrelated entries rather than a timeline
-of one state, so the readings that treat it as a timeline are not offered for it; and merging the changes of
-commits that sit on branches which never met produces a tree of changes that undo one another, so **Selected
-Commits** is offered for several entries only once git has confirmed each is an ancestor of the next.
+Comparisons are withheld where they have nothing to say. A stash reflog is a stack of unrelated entries rather
+than a timeline of one state, so the two readings that ask what a movement did are not offered for it. And on a
+timeline, merging the changes of commits that sit on branches which never met produces a tree of changes that
+undo one another, so **Selected Commits** is offered for several entries only once git has confirmed each is an
+ancestor of the next.
+
+That last check is asked of timelines only. Stash entries are never ancestors of one another - that is true of
+every pair of them there has ever been, so it says nothing about any particular pair - and what they hold are
+independent sets of work over a common base, all of them forward changes. Merging several of them is a union of
+what they hold rather than a pile of contradictions, so **Selected Commits** fits a stash selection of any size.
+Nothing to compare therefore means nothing selected.
 
 The choice is remembered outside the project, so the tab opens the way it was last left. A choice that has no
 answer for the selection of the moment gives way to the nearest one that does, rather than emptying the pane -
@@ -99,8 +108,9 @@ of the repository, so that an edit which is merely saved - touching no git state
 hear about - still reaches it.
 
 Whether the selected entries sit on one line of history takes a `git merge-base --is-ancestor` per neighbouring
-pair to answer, so it is asked only once the answer can change which comparison is shown - never on the way past
-a row.
+pair to answer, so it is asked only where the answer can change which comparison is shown: of a selection of
+several, on a timeline, and never on the way past a row. On a stash it is not asked at all - the answer there is
+the same for every pair of entries, and no reading turns on it.
 
 **Show Changed Files** on the toolbar puts the file pane away and brings it back. It is a button of its own
 rather than a third state of the diff buttons below, because which files an entry touched and what it did to one
@@ -179,7 +189,13 @@ the colour the platform gives it.
 
 ### Actions on the selected entry
 
-- **Show Diff** - the changes of the commit, read with `git show`. Also opened by a double click.
+- **Show Diff: <comparison>** - opens in the diff viewer whatever the file pane is showing, and is named for
+  it: on its own, "Show Diff" cannot say which of the four comparisons it means, and the pane that would
+  otherwise be the answer is one of the things the tab lets you put away. Also opened by a double click on an
+  entry, that being the same gesture said faster.
+- **Show Diff As** - the same four comparisons, opened in the diff viewer without changing which one the file
+  pane is showing. Greyed and withheld exactly as **Compare** is, what fits being a property of the selection
+  rather than of which menu is asking.
 - **Checkout Revision** - checks the working tree out at the commit, leaving the repository on a detached `HEAD`.
 - **New Branch from Here** - creates a branch at the commit and checks it out. A branch keeps the commit alive
   past the expiry of the reflog, which is what makes this the way to rescue work rather than only look at it.
@@ -200,12 +216,22 @@ there. Show Diff reads the commit directly and works for those as well - which i
 ### Reading past the first page
 
 Reflogs of long-lived repositories hold tens of thousands of records, so a read asks for the newest 1000 of them
-rather than all. When a read comes back full - and only then - a **Load More** button appears in the toolbar and
-reads another 1000 on top.
+rather than all. When a read comes back full - and only then - a **Load More** link appears and reads another
+1000 on top. A read that comes back short of what it asked for has reached the end of the reflog, which is how
+the tab knows there is nothing more to offer without asking git a second time.
+
+The link is drawn beside the count of what has been read, rather than contributed to the toolbar as an action.
+The two say one thing between them - how much is on screen, and that there is more - and a click moves the number
+it stands beside, which is the answer to whether the click did anything. An action would also have had to wait
+for a toolbar to ask it what to show, where a toolbar has no way of knowing that git has answered.
+
+The count says which of three states the reading is in: `Showing 1,000 of the newest 1,000 entries read` while a
+page is left unread, `Showing 12 of 1,037` while a filter is narrowing what was read, and `Showing all 1,037
+entries` once the whole reflog is on screen and nothing is hidden. That last one is what replaces Load More when
+the last page has been read.
 
 This matters because the filters run over what was read: an entry older than the last page is not found by
-filtering either. The count next to the filter field says when a page boundary is in play, and the selected entry
-survives the Load More the same way it survives a re-read.
+filtering either. The selected entry survives a Load More the same way it survives a re-read.
 
 Switching the ref or the repository starts again at one page, since how far the previous reflog had been read
 says nothing about the new one.
@@ -219,10 +245,11 @@ says nothing about the new one.
   placeholder, and [GitReflogParser.kt][file:GitReflogParser.kt] for why the `HEAD@{n}` index comes from the
   record's position in the output. The parser is a separate object so that the format can be covered by tests
   without a repository.
-- Every action acts on what the tab publishes into the data context - the selected entries for the plugin's own
-  actions, the revision numbers for Select in Git Log and Copy Revision Number, which are platform actions the
-  plugin only references, and whether a page was left unread for Load More. Publishing that last one rather than
-  reading it off the panel is what lets every action update off the EDT.
+- Every action acts on what the tab publishes into the data context - the selected entries for the actions over
+  a single entry, the whole selection against its reflog and which comparisons fit it for the ones that compare,
+  and the revision numbers for Select in Git Log and Copy Revision Number, which are platform actions the plugin
+  only references. Publishing a snapshot rather than letting an action read the panel is what lets every action
+  update off the EDT: working out which comparisons fit reads the table, and only the EDT may do that.
 - The file pane's toolbar and menu add the platform's `Vcs.RepositoryChangesBrowserToolbar` and
   `Vcs.RepositoryChangesBrowserMenu` groups to what `ChangesBrowserBase` already brings. Where the Log keeps the
   placement of its diff pane in a View Options popup on that same toolbar, the tab keeps it as two buttons on its

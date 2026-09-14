@@ -15,12 +15,6 @@ internal object GitReflogDataKeys {
     val SELECTED_ENTRIES: DataKey<List<GitReflogEntry>> = DataKey.create("GitReflog.SelectedEntries")
 
     /**
-     * Whether older records remain unread. Published rather than read off the panel so that Load More can update
-     * off the EDT like every other action of the tab.
-     */
-    val HAS_MORE: DataKey<Boolean> = DataKey.create("GitReflog.HasMore")
-
-    /**
      * Which readings of the selected entries are on offer, and which one the file pane is showing. Published
      * rather than read off the panel because working it out reads the table, which only the EDT may do.
      */
