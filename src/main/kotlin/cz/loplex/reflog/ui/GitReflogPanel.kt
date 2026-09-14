@@ -419,14 +419,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     fun selection(): GitReflogSelection = GitReflogSelection(ref, entries, table.selectedObjects)
 
     /** What the modes stand at for what is selected right now, for the switch and the context menu to show. */
-    fun diffModes(): GitReflogDiffModes {
-        val selection = selection()
-        return GitReflogDiffModes(
-            preferred = diffMode,
-            effective = diffMode.effectiveFor(selection, ancestry),
-            applicable = GitReflogDiffMode.entries.filter { it.isApplicableTo(selection, ancestry) },
-        )
-    }
+    fun diffModes(): GitReflogDiffModes = GitReflogDiffModes.of(diffMode, selection(), ancestry)
 
     /**
      * Reads the changes of the selected entries into the file pane, under the mode that fits them.

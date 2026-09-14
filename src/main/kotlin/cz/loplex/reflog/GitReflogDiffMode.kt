@@ -170,4 +170,22 @@ internal data class GitReflogDiffModes(
     val effective: GitReflogDiffMode?,
     /** Modes that have an answer for what is selected. */
     val applicable: List<GitReflogDiffMode>,
-)
+) {
+    companion object {
+        /**
+         * What the modes stand at for [selection], as the switch and the context menu are to show them.
+         *
+         * The one place the snapshot is worked out, so that what a test reads is what the tab publishes rather
+         * than a second copy of the same rule.
+         */
+        fun of(
+            preferred: GitReflogDiffMode,
+            selection: GitReflogSelection,
+            ancestry: GitReflogAncestry,
+        ): GitReflogDiffModes = GitReflogDiffModes(
+            preferred = preferred,
+            effective = preferred.effectiveFor(selection, ancestry),
+            applicable = GitReflogDiffMode.entries.filter { it.isApplicableTo(selection, ancestry) },
+        )
+    }
+}

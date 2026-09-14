@@ -93,7 +93,7 @@ internal class GitReflogDiffModeSwitch : ComboBoxAction(), DumbAware {
      * A combo box drops what it cannot offer unless told otherwise, and dropping is the one thing this list must
      * not do: a reading that is merely absent leaves nothing to explain itself.
      */
-    override fun shouldShowDisabledActions(): Boolean = true
+    public override fun shouldShowDisabledActions(): Boolean = true
 
     override fun createPopupActionGroup(button: JComponent, context: DataContext): DefaultActionGroup =
         DefaultActionGroup(GitReflogDiffMode.entries.map(::GitReflogDiffModeAction))
