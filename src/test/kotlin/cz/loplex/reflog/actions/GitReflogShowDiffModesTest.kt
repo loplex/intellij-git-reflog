@@ -48,6 +48,32 @@ class GitReflogShowDiffModesTest : BasePlatformTestCase() {
         )
     }
 
+    /**
+     * Named for the reading it will open, rather than "Show Diff" on its own.
+     *
+     * The pane that would otherwise answer "which of the four?" is one of the things the tab lets you put away,
+     * so the menu item has to carry the answer itself.
+     */
+    fun `test Show Diff is named for the reading it opens`() {
+        val step = modesFor(GitReflogAncestry.LINEAR, onMaster)
+        assertEquals("Show Diff: Reflog Step", updated(GitReflogShowDiffAction(), contextOf(step)).text)
+
+        val oldest = GitReflogDiffModes.of(
+            GitReflogDiffMode.WORKING_TREE,
+            GitReflogSelection(GitReflogRef.HEAD, entries, listOf(onMaster)),
+            GitReflogAncestry.LINEAR,
+        )
+        assertEquals("Show Diff: Against Working Tree", updated(GitReflogShowDiffAction(), contextOf(oldest)).text)
+    }
+
+    /** Away from the tab there is no reading to name, so the action falls back to its own plain name. */
+    fun `test Show Diff keeps its plain name away from the tab`() {
+        assertEquals(
+            "Show Diff",
+            updated(GitReflogShowDiffAction(), SimpleDataContext.EMPTY_CONTEXT).text,
+        )
+    }
+
     fun `test every reading can be opened in the diff viewer`() {
         assertEquals(
             GitReflogDiffMode.entries.map(::titleOf),

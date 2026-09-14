@@ -24,9 +24,9 @@ import git4idea.repo.GitRepository
 /**
  * Opens what the file pane is showing in the diff viewer.
  *
- * Which reading that is belongs to Compare, and this follows it: named on its own, "Show Diff" cannot say which
- * of four comparisons it means, and it does not need to - the pane beside it is already showing the answer. Any
- * of the other three is a submenu away.
+ * Which reading that is belongs to Compare, and this follows it - and says so in its own name, since the pane
+ * that would otherwise be the answer is one of the things this tab lets you put away. Any of the other three is
+ * a submenu away.
  *
  * It used to read the selected entry against its own parent whatever Compare was set to, which on a checkout or
  * a reset answered a different question than the pane did, and was in any case the same thing the submenu's
@@ -40,9 +40,16 @@ internal class GitReflogShowDiffAction : DumbAwareAction() {
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
     override fun update(e: AnActionEvent) {
+        val shown = e.getData(GitReflogDataKeys.DIFF_MODES)?.effective
+
         // Enabled on there being a comparison on screen at all, which a stash with several entries selected has
         // none of - and where there is nothing to look at, there is nothing to open.
-        e.presentation.isEnabled = e.getData(GitReflogDataKeys.DIFF_MODES)?.effective != null
+        e.presentation.isEnabled = shown != null
+        // Named for the reading it will open. "Show Diff" on its own says which of four only if the file pane is
+        // there to be looked at, and the file pane is one of the things this tab lets you put away.
+        e.presentation.text = shown
+            ?.let { GitReflogBundle.message("reflog.show.diff.as", titleOf(it)) }
+            ?: GitReflogBundle.message("action.GitReflog.ShowDiff.text")
     }
 
     override fun actionPerformed(e: AnActionEvent) {
