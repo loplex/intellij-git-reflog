@@ -190,9 +190,17 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
         /**
          * How long a read may take before it is worth saying that it is under way.
          *
-         * Long enough that stepping through the table draws nothing, short enough that a reflog entry touching
-         * a great many files does not look like a pane that has stopped answering.
+         * A second, which is the length at which a wait stops reading as an answer and starts reading as a delay
+         * - the threshold Nielsen's response-time work puts on an operation feeling immediate, and the reason an
+         * indicator below it costs more than it gives.
+         *
+         * Measured rather than guessed at: reading the changes of an entry takes some 40-80 ms, so the read
+         * itself never reaches this. What does reach it is the two hops onto the EDT the read is wrapped in -
+         * one to say it has started, one to hand back what it found - which queue behind whatever the EDT is
+         * already doing. Stepping through the table with the arrow keys is exactly when it is busiest, which is
+         * how a third of a second turned out to be short enough to draw an indicator on every step and take it
+         * away again at once.
          */
-        const val LOADING_DELAY_MS = 300
+        const val LOADING_DELAY_MS = 1000
     }
 }
