@@ -696,7 +696,11 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         private const val CONTEXT_MENU_PLACE = "GitReflogPopup"
         private const val CONTEXT_MENU_GROUP_ID = "GitReflog.ContextMenu"
         private const val SEARCH_FIELD_COLUMNS = 16
-        private const val SEARCH_HISTORY = "GitReflog.searchHistory"
+        /**
+         * Where the field's history is kept between sessions. Not private, so that a test can put back what a
+         * run of it leaves in the application's own properties.
+         */
+        const val SEARCH_HISTORY: String = "GitReflog.searchHistory"
         private const val REPOSITORY_CHANGE_DELAY_MS = 300
         private const val SELECTION_CHANGE_DELAY_MS = 150
     }
