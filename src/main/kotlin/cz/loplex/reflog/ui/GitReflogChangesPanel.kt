@@ -9,7 +9,10 @@ import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ui.DefaultChangesTreeDiffPreviewHandler
 import com.intellij.openapi.vcs.changes.ui.TreeHandlerEditorDiffPreview
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.components.JBLoadingPanel
 import com.intellij.util.ui.components.BorderLayoutPanel
+import cz.loplex.reflog.GitReflogBundle
+import java.awt.BorderLayout
 import org.jetbrains.annotations.Nls
 import javax.swing.JComponent
 
@@ -24,6 +27,22 @@ import javax.swing.JComponent
 internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent) : BorderLayoutPanel(), Disposable {
 
     private val browser = GitReflogChangesBrowser(project)
+
+    /**
+     * The file pane under a loading indicator, the way the Log puts one over its own.
+     *
+     * Emptying the list to say that a read is under way costs the answer that is already on screen, and the read
+     * runs on every step through the table - so the list blinked its way through a walk of the reflog, saying
+     * least exactly when the eye was on it. The indicator leaves the previous list standing instead.
+     *
+     * [LOADING_DELAY_MS] is what keeps the cure from being the disease: a read that comes back inside it draws no
+     * indicator at all, so stepping through entries stays as still as the list now does.
+     */
+    private val loadingPanel = JBLoadingPanel(BorderLayout(), this, LOADING_DELAY_MS).apply {
+        add(browser, BorderLayout.CENTER)
+        setLoadingText(GitReflogBundle.message("reflog.changes.loading"))
+    }
+
     private val filesSplitter = OnePixelSplitter(false, FILES_SPLITTER_PROPORTION, 0.6f)
     private val diffSplitter = OnePixelSplitter(true, DIFF_SPLITTER_PROPORTION, 0.6f)
 
@@ -82,12 +101,28 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
 
     /** Shows [changes] as the files of the entry, or [emptyText] in their place when there are none. */
     fun setChanges(changes: List<Change>, emptyText: @Nls String) {
+        stopLoading()
         browser.viewer.setEmptyText(emptyText)
         browser.setChangesToDisplay(changes)
     }
 
     /** Empties the file pane and says why it is empty. */
     fun showEmptyText(text: @Nls String) = setChanges(emptyList(), text)
+
+    /** Says that the changes are being read, leaving what is already on screen where it is. */
+    fun startLoading() = loadingPanel.startLoading()
+
+    /**
+     * Takes the indicator down without putting anything in its place.
+     *
+     * For the reads that end without an answer to show - a selection moving on before the last one came back,
+     * both panes being put away under a read - which leave nothing to call [setChanges] for.
+     *
+     * Called whether or not an indicator is up: inside [LOADING_DELAY_MS] there is none yet, only a request for
+     * one, and this is what withdraws it. Guarding the call on an indicator being up would let that request
+     * through, raising an indicator over a read that had already finished, with nothing left to take it down.
+     */
+    fun stopLoading() = loadingPanel.stopLoading()
 
     override fun dispose() {
         diffViewer?.let { Disposer.dispose(it.disposable) }
@@ -104,7 +139,7 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
      * itself stays alive either way, being what the diff pane follows the selection of.
      */
     private fun updateFilePane() {
-        filesSplitter.secondComponent = if (isFilePaneVisible) browser else null
+        filesSplitter.secondComponent = if (isFilePaneVisible) loadingPanel else null
     }
 
     /**
@@ -146,5 +181,13 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
         const val SHOW_FILE_PANE = "GitReflog.showFilePane"
         const val SHOW_DIFF_PREVIEW = "GitReflog.showDiffPreview"
         const val DIFF_PREVIEW_AT_BOTTOM = "GitReflog.diffPreviewAtBottom"
+
+        /**
+         * How long a read may take before it is worth saying that it is under way.
+         *
+         * Long enough that stepping through the table draws nothing, short enough that a reflog entry touching
+         * a great many files does not look like a pane that has stopped answering.
+         */
+        const val LOADING_DELAY_MS = 300
     }
 }

@@ -442,6 +442,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         // With both panes away there is nobody for the read to answer, and the selection still moves.
         if (!changesPanel.isAnyPaneVisible) {
             changesJob?.cancel()
+            changesPanel.stopLoading()
             shownChangesFor = null
             return
         }
@@ -456,7 +457,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             repository,
             selection,
             diffMode,
-            onStarted = { changesPanel.showEmptyText(GitReflogBundle.message("reflog.changes.loading")) },
+            onStarted = { changesPanel.startLoading() },
             onFinished = { result -> showChanges(selection, result) },
         )
     }

@@ -7,6 +7,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserBase
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
+import javax.swing.JPanel
 
 /**
  * Covers that the toolbars really end up carrying what the tab builds for them. The groups are looked up by id
@@ -58,6 +59,32 @@ class GitReflogFilePaneTest : BasePlatformTestCase() {
 
         panel.isFilePaneVisible = true
         assertNotNull("The file pane did not come back", UIUtil.findComponentOfType(panel, ChangesBrowserBase::class.java))
+    }
+
+    /**
+     * A read says that it is under way over the list rather than in place of it.
+     *
+     * Saying so by emptying the list costs the answer already on screen, and the read runs on every step through
+     * the table - which is what made the pane blink its way through a walk of the reflog.
+     */
+    fun testAReadDoesNotEmptyTheListToSayItIsUnderWay() {
+        val pane = GitReflogChangesPanel(project, JPanel())
+        Disposer.register(testRootDisposable, pane)
+        val browser = UIUtil.findComponentOfType(pane, ChangesBrowserBase::class.java)
+        assertNotNull("The pane has no file list", browser)
+
+        pane.showEmptyText(PREVIOUS_ANSWER)
+        pane.startLoading()
+
+        assertEquals(
+            "Starting a read wrote over what the pane was showing",
+            PREVIOUS_ANSWER,
+            browser!!.viewer.emptyText.text,
+        )
+    }
+
+    private companion object {
+        const val PREVIOUS_ANSWER = "what the previous read answered"
     }
 
     private fun idsOf(action: AnAction): List<String> {
