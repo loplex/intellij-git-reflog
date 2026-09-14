@@ -118,23 +118,13 @@ class GitReflogDiffModeActionsTest : BasePlatformTestCase() {
     private fun isTicked(mode: GitReflogDiffMode, modes: GitReflogDiffModes): Boolean =
         Toggleable.isSelected(updated(GitReflogDiffModeAction(mode), modes))
 
-    private fun childrenOf(modes: GitReflogDiffModes): Array<AnAction> =
-        GitReflogDiffModeGroup().getChildren(eventFor(modes))
+    private fun childrenOf(modes: GitReflogDiffModes): Array<AnAction> = GitReflogDiffModeGroup().getChildren(
+        AnActionEvent.createEvent(contextOf(modes), Presentation(), ActionPlaces.UNKNOWN, ActionUiKind.POPUP, null),
+    )
 
     /** The presentation [action] leaves behind once it has been asked about a selection, as a menu would ask it. */
-    private fun updated(action: AnAction, modes: GitReflogDiffModes): Presentation {
-        val event = eventFor(modes)
-        action.update(event)
-        return event.presentation
-    }
-
-    private fun eventFor(modes: GitReflogDiffModes): AnActionEvent = AnActionEvent.createEvent(
-        contextOf(modes),
-        Presentation(),
-        ActionPlaces.UNKNOWN,
-        ActionUiKind.POPUP,
-        null,
-    )
+    private fun updated(action: AnAction, modes: GitReflogDiffModes): Presentation =
+        updated(action, contextOf(modes))
 
     private fun contextOf(modes: GitReflogDiffModes): DataContext =
         SimpleDataContext.getSimpleContext(GitReflogDataKeys.DIFF_MODES, modes)
