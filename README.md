@@ -148,10 +148,14 @@ Switching the repository resets the ref to `HEAD`, and so does asking for a ref 
 Two filters narrow what the table shows, and they combine:
 
 - **the filter field** - matched against everything shown as text: the description, the action, the selector, the
-  commit message and the author, plus the beginning of the hash, so a pasted hash prefix finds its entry;
+  commit message and the author, plus the beginning of the hash, so a pasted hash prefix finds its entry. The
+  table narrows as the text is typed, which leaves Enter free to mean what it means in the IDE's other search
+  fields: keep this one. The field's history is kept across sessions, a reflog being where one goes back to look
+  for the same lost commit twice;
 - **the action filter** - a checkbox per kind of operation, every one of them ticked to begin with, since every
   kind is shown. Unticking one is what narrows the table, and **All** above them - or the filter's reset button -
-  ticks them all again. The kinds are collected from the entries at hand, so the list never offers an operation this reflog does not
+  ticks them all again. Unticking every kind, by hand or through **All**, is taken as ticking them all instead:
+  nobody asks to be shown nothing, and an empty table would read as a fault rather than as an answer. The kinds are collected from the entries at hand, so the list never offers an operation this reflog does not
   contain, and `commit (amend)` is offered under `commit` rather than as a kind of its own. A reflog whose
   entries carry no action at all - the stash - leaves the filter disabled.
 

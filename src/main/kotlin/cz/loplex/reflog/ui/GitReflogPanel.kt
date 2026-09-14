@@ -67,7 +67,12 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     private val tableModel = GitReflogTableModel()
     private val table = TableView(tableModel)
     private val changesPanel = GitReflogChangesPanel(project, ScrollPaneFactory.createScrollPane(table, true))
-    private val searchField = SearchTextField(false)
+    /**
+     * Kept across sessions under a name of its own, the way every search field in the IDE keeps its own: what was
+     * looked for in a reflog is worth offering again, a reflog being where one goes back to look for the same
+     * lost commit twice.
+     */
+    private val searchField = SearchTextField(true, SEARCH_HISTORY)
     private val countLabel = JBLabel()
     private val repositoryFilter = RepositoryFilter()
     private val refFilter = RefFilter()
@@ -379,6 +384,9 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         searchField.addDocumentListener(object : DocumentAdapter() {
             override fun textChanged(e: DocumentEvent) = setFilter(filter.copy(text = searchField.text))
         })
+        // The table narrows as the text is typed, so Enter has nothing left to apply - which leaves it free to
+        // mean what it means in the platform's own search fields: remember this one.
+        searchField.textEditor.addActionListener { searchField.addCurrentTextToHistory() }
         countLabel.foreground = UIUtil.getContextHelpForeground()
     }
 
@@ -695,6 +703,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         private const val CONTEXT_MENU_PLACE = "GitReflogPopup"
         private const val CONTEXT_MENU_GROUP_ID = "GitReflog.ContextMenu"
         private const val SEARCH_FIELD_COLUMNS = 16
+        private const val SEARCH_HISTORY = "GitReflog.searchHistory"
         private const val REPOSITORY_CHANGE_DELAY_MS = 300
         private const val SELECTION_CHANGE_DELAY_MS = 150
     }
