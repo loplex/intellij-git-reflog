@@ -6,6 +6,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.KeepPopupOnPerform
 import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.ex.ComboBoxAction
 import com.intellij.openapi.project.DumbAware
@@ -54,6 +55,10 @@ internal class GitReflogDiffModeAction(private val mode: GitReflogDiffMode) : To
         super.update(e)
         val modes = e.getData(GitReflogDataKeys.DIFF_MODES)
         e.presentation.isEnabled = modes != null && mode in modes.applicable
+        // Picking a reading is picking one of four, not ticking one of many, so the menu has done its job and
+        // closes. Left open - which is what a toggle does by default - it goes on showing the tick where it was
+        // when it opened, since nothing asks it again, while the pane behind it has already changed.
+        e.presentation.keepPopupOnPerform = KeepPopupOnPerform.Never
     }
 
     override fun isSelected(e: AnActionEvent): Boolean = e.getData(GitReflogDataKeys.DIFF_MODES)?.effective == mode

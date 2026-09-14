@@ -15,7 +15,16 @@ import com.intellij.openapi.actionSystem.Presentation
  * back the same answer a toolbar would get.
  */
 internal fun updated(action: AnAction, context: DataContext): Presentation {
-    val event = AnActionEvent.createEvent(context, Presentation(), ActionPlaces.UNKNOWN, ActionUiKind.POPUP, null)
+    // A copy of the action's own template, which is what the platform hands it - not a blank one. Actions carry
+    // defaults on that template (a ToggleAction, for one, leaves a popup open on being performed), and a blank
+    // presentation quietly drops them, leaving a test agreeing with itself about a default nobody uses.
+    val event = AnActionEvent.createEvent(
+        context,
+        action.templatePresentation.clone(),
+        ActionPlaces.UNKNOWN,
+        ActionUiKind.POPUP,
+        null,
+    )
     action.update(event)
     return event.presentation
 }

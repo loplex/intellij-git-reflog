@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.ActionUiKind
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.KeepPopupOnPerform
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.Toggleable
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
@@ -100,6 +101,23 @@ class GitReflogDiffModeActionsTest : BasePlatformTestCase() {
         assertTrue("Selected Commits is not ticked", isTicked(GitReflogDiffMode.UNION, modes))
         assertFalse("Reflog Step is ticked for a selection it has no answer for", isTicked(GitReflogDiffMode.REFLOG_STEP, modes))
         assertDisabled("Reflog Step reaches past the oldest entry", GitReflogDiffMode.REFLOG_STEP, modes)
+    }
+
+    /**
+     * The menu closes on a pick, rather than staying open the way a toggle does by default.
+     *
+     * Four readings of which one is showing is a choice, not a set of boxes to tick, so there is nothing left to
+     * do in the menu once one is picked. Left open it would also go on showing the tick where it stood when it
+     * opened - nothing asks an open menu again - while the pane behind it had already changed.
+     */
+    fun `test picking a reading closes the menu`() {
+        val modes = modesFor(GitReflogDiffMode.REFLOG_STEP, GitReflogAncestry.LINEAR, onMaster)
+
+        assertEquals(
+            "The menu would stay open on a pick, leaving its tick where it was",
+            KeepPopupOnPerform.Never,
+            updated(GitReflogDiffModeAction(GitReflogDiffMode.UNION), contextOf(modes)).keepPopupOnPerform,
+        )
     }
 
     private fun modesFor(
