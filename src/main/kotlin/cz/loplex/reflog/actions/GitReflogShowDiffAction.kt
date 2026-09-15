@@ -19,7 +19,7 @@ import git4idea.repo.GitRepository
  */
 internal class GitReflogShowDiffAction : GitReflogEntryAction() {
 
-    override fun perform(selection: GitReflogSelection) {
+    override fun perform(selection: GitReflogEntryTarget) {
         showReflogEntryDiff(selection.project, selection.repository, selection.entry)
     }
 }

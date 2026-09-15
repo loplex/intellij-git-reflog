@@ -10,7 +10,7 @@ import git4idea.branch.GitBrancher
  */
 internal class GitReflogCheckoutRevisionAction : GitReflogEntryAction() {
 
-    override fun perform(selection: GitReflogSelection) {
+    override fun perform(selection: GitReflogEntryTarget) {
         // detach=false matches what the Log tab passes: the argument is a hash rather than a branch, so git
         // detaches on its own and GitBrancher keeps its own handling of local changes and of the notification.
         GitBrancher.getInstance(selection.project)

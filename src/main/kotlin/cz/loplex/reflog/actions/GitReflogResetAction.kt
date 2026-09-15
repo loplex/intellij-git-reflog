@@ -15,7 +15,7 @@ import git4idea.reset.GitResetOperation
  */
 internal class GitReflogResetAction : GitReflogEntryAction() {
 
-    override fun perform(selection: GitReflogSelection) {
+    override fun perform(selection: GitReflogEntryTarget) {
         val project = selection.project
         val repository = selection.repository
         val entry = selection.entry
