@@ -8,6 +8,10 @@ import com.intellij.openapi.vcs.changes.ui.ChangesBrowserBase
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
+import cz.loplex.reflog.GitReflogDiffMode
+import cz.loplex.reflog.GitReflogEntry
+import cz.loplex.reflog.GitReflogRef
+import cz.loplex.reflog.GitReflogSelection
 import javax.swing.JPanel
 
 /**
@@ -109,8 +113,70 @@ class GitReflogFilePaneTest : BasePlatformTestCase() {
         )
     }
 
+    /**
+     * A movement that left the ref where it found it is an answer, not a fault - and it used to be told as one,
+     * the pane naming one and the same hash on both sides of "nothing changed between".
+     *
+     * It happens for real twice over: a checkout between two branches that stand on the same commit, and the
+     * reset `git stash` makes internally once it has put the work away.
+     */
+    fun testAMovementThatStayedPutIsSaidInWordsRatherThanAsAHashTwice() {
+        // Two movements of HEAD that both left it at the same commit, as a checkout between two branches
+        // standing on one commit does.
+        val entries = listOf(entry("HEAD@{0}", STAYED), entry("HEAD@{1}", STAYED), entry("HEAD@{2}", ELSEWHERE))
+
+        val step = selection(entries, entries[0])
+        assertEquals(
+            "Nothing moved: HEAD stood at 8dede56f both before and after",
+            emptyChangesTextFor(step, GitReflogDiffMode.REFLOG_STEP),
+        )
+
+        val between = selection(entries, entries[0], entries[1])
+        assertEquals(
+            "Nothing to compare: both selected states are 8dede56f",
+            emptyChangesTextFor(between, GitReflogDiffMode.BETWEEN_SELECTED),
+        )
+    }
+
+    /** The two states a movement did reach are still named, which is what tells one comparison from another. */
+    fun testAnEmptyComparisonOfTwoStatesNamesBothOfThem() {
+        val entries = listOf(entry("HEAD@{0}", STAYED), entry("HEAD@{1}", ELSEWHERE))
+        val selection = selection(entries, entries[0])
+
+        assertEquals(
+            "Nothing changed between 3f0a91c2 and 8dede56f",
+            emptyChangesTextFor(selection, GitReflogDiffMode.REFLOG_STEP),
+        )
+        assertEquals(
+            "The working tree matches 8dede56f",
+            emptyChangesTextFor(selection, GitReflogDiffMode.WORKING_TREE),
+        )
+        // The one mode with no recorded state on either side falls back to naming the commit itself.
+        assertEquals(
+            "Commit 8dede56f changes nothing against its parent",
+            emptyChangesTextFor(selection, GitReflogDiffMode.UNION),
+        )
+    }
+
+    private fun selection(entries: List<GitReflogEntry>, vararg selected: GitReflogEntry) =
+        GitReflogSelection(GitReflogRef.HEAD, entries, selected.toList())
+
+    private fun entry(selector: String, hash: String) = GitReflogEntry(
+        selector = selector,
+        hash = hash,
+        timestamp = 0L,
+        action = "checkout",
+        description = "moving from master to feature",
+        author = "Alex Smith",
+        subject = "Parse the separator",
+    )
+
     private companion object {
         const val PREVIOUS_ANSWER = "what the previous read answered"
+
+        /** Hashes are shortened to eight characters, so they are written long enough here to be shortened. */
+        const val STAYED = "8dede56f1a2b3c4d"
+        const val ELSEWHERE = "3f0a91c2b8e7d6a5"
     }
 
     private fun idsOf(action: AnAction): List<String> {

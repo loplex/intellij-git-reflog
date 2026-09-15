@@ -88,6 +88,13 @@ independent sets of work over a common base, all of them forward changes. Mergin
 what they hold rather than a pile of contradictions, so **Selected Commits** fits a stash selection of any size.
 Nothing to compare therefore means nothing selected.
 
+A comparison that comes back empty says which one it made and of what: `Nothing changed between 3f0a91c2 and
+8dede56f`, or `The working tree matches 8dede56f`. Where the movement left the ref where it found it - a checkout
+between two branches standing on the same commit, or the reset `git stash` makes internally once it has put the
+work away - the answer is given in words instead: `Nothing moved: HEAD stood at 8dede56f both before and after`.
+Naming a range there would print one and the same hash on both sides, which reads as a fault in the tab rather
+than as the answer it is.
+
 The choice is remembered outside the project, so the tab opens the way it was last left. A choice that has no
 answer for the selection of the moment gives way to the nearest one that does, rather than emptying the pane -
 and comes back as soon as a selection it suits is made again. What the toolbar and the ticks in the menu show is

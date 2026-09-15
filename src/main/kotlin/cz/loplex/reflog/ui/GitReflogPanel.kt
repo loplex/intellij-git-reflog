@@ -81,6 +81,37 @@ internal fun countTextFor(shown: Int, total: Int, hasMore: Boolean): String = wh
 }
 
 /**
+ * What the file pane says when the comparison it made came back with nothing in it, naming the two states it
+ * compared.
+ *
+ * Worth a message per case: "nothing changed" is a different statement about a reset than it is about a commit,
+ * and a pane that does not say which comparison it made leaves the reader unable to tell the mode they asked for
+ * from the one they were given.
+ *
+ * Two of the cases are movements that stayed put - a checkout between branches that stand on the same commit, or
+ * the reset `git stash` makes internally. Naming the two sides there would print one hash twice, which reads as a
+ * fault in the tab rather than as the answer it is, so each says in words that nothing moved.
+ */
+internal fun emptyChangesTextFor(selection: GitReflogSelection, mode: GitReflogDiffMode): String {
+    val old = mode.oldSideOf(selection)
+    val new = mode.newSideOf(selection)
+    return when {
+        mode == GitReflogDiffMode.WORKING_TREE && old != null ->
+            GitReflogBundle.message("reflog.changes.empty.working.tree", old.shortHash)
+        // Only ever a timeline: the modes with two recorded sides are the ones a stash is refused.
+        old != null && new != null && old.hash == new.hash ->
+            if (mode == GitReflogDiffMode.REFLOG_STEP)
+                GitReflogBundle.message("reflog.changes.empty.in.place", selection.ref.presentableName, old.shortHash)
+            else
+                GitReflogBundle.message("reflog.changes.empty.same.state", old.shortHash)
+        old != null && new != null ->
+            GitReflogBundle.message("reflog.changes.empty.range", old.shortHash, new.shortHash)
+        else ->
+            GitReflogBundle.message("reflog.changes.empty", selection.newest?.shortHash.orEmpty())
+    }
+}
+
+/**
  * Content of the Reflog tab: the reflog of one ref of one repository, plus the toolbar that picks what is read
  * and the filters that narrow what of it is shown.
  */
@@ -545,7 +576,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
                 val mode = outcome.mode
                 // Nothing fits a selection with nothing in it, which is what the pane says in its own words.
                 if (mode == null) changesPanel.showEmptyText(GitReflogBundle.message("reflog.changes.none.selected"))
-                else changesPanel.setChanges(outcome.changes, emptyTextFor(selection, mode))
+                else changesPanel.setChanges(outcome.changes, emptyChangesTextFor(selection, mode))
             }
             .onFailure { error ->
                 shownChangesFor = null
@@ -553,26 +584,6 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
                     GitReflogBundle.message("reflog.changes.error", error.message.orEmpty()),
                 )
             }
-    }
-
-    /**
-     * Says what came back empty, naming the two states the mode compared.
-     *
-     * Worth the three messages: "nothing changed" is a different statement about a reset than it is about a
-     * commit, and a pane that does not say which comparison it made leaves the user unable to tell the mode
-     * they asked for from the one they were given.
-     */
-    private fun emptyTextFor(selection: GitReflogSelection, mode: GitReflogDiffMode): String {
-        val old = mode.oldSideOf(selection)
-        val new = mode.newSideOf(selection)
-        return when {
-            mode == GitReflogDiffMode.WORKING_TREE && old != null ->
-                GitReflogBundle.message("reflog.changes.empty.working.tree", old.shortHash)
-            old != null && new != null ->
-                GitReflogBundle.message("reflog.changes.empty.range", old.shortHash, new.shortHash)
-            else ->
-                GitReflogBundle.message("reflog.changes.empty", selection.newest?.shortHash.orEmpty())
-        }
     }
 
     /** Reads the changes again for a pane that has just been brought back, having gone unread while it was away. */
