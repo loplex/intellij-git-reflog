@@ -64,10 +64,6 @@ import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 
 /**
- * Content of the Reflog tab: the reflog of one ref of one repository, plus the toolbar that picks what is read
- * and the filters that narrow what of it is shown.
- */
-/**
  * What the label beside Load More says about how much of the reflog is on screen.
  *
  * The case worth naming is the last one: with the whole reflog read and nothing filtered out, the label used to
@@ -84,6 +80,10 @@ internal fun countTextFor(shown: Int, total: Int, hasMore: Boolean): String = wh
     else -> GitReflogBundle.message("reflog.count.all", total)
 }
 
+/**
+ * Content of the Reflog tab: the reflog of one ref of one repository, plus the toolbar that picks what is read
+ * and the filters that narrow what of it is shown.
+ */
 internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPanel(true, true), Disposable {
 
     private val tableModel = GitReflogTableModel()
