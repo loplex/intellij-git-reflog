@@ -10,7 +10,7 @@ What the tab *does* is in [docs/usage.md](docs/usage.md), and why it behaves as 
 - [Project layout](#project-layout) - where each kind of file lives.
 - [The build script](#the-build-script) - the three Gradle plugins, and the platform compiled against.
 - [The plugin manifest](#the-plugin-manifest) - `plugin.xml`, and the one value in it that may never change.
-- [Releasing](#releasing) - what a tag sets off, and the secrets it needs to have been given.
+- [Releasing](#releasing) - the one button that cuts a release, and the secrets it needs to have been given.
 
 ## Build and test
 
@@ -140,16 +140,20 @@ are free of it and need not match.
 
 ## Releasing
 
-A release is started by a tag and finished by a person. Pushing `v0.2.0` builds, signs and drafts; nothing is
-published until the draft is accepted.
+A release is asked for in the Actions tab and finished by accepting a draft. Nothing between the two is typed.
 
 ```
-push tag v0.2.0
-  └─ .github/workflows/release-draft.yml
-       ├─ refuses the tag if gradle.properties says a different version
-       ├─ ./gradlew check
-       ├─ ./gradlew signPlugin
-       └─ draft release, carrying ij-git-reflog-0.2.0-signed.zip
+[Actions -> Prepare release -> 0.2.0]
+  └─ .github/workflows/prepare-release.yml
+       ├─ refuses a version already released, or one that is not a version
+       ├─ refuses an empty Unreleased section
+       ├─ version=0.2.0 in gradle.properties
+       ├─ ./gradlew patchChangelog      ([Unreleased] becomes [0.2.0], dated and linked)
+       ├─ commit "Release 0.2.0", tag v0.2.0, push
+       └─ calls release-draft.yml
+            ├─ ./gradlew check
+            ├─ ./gradlew signPlugin
+            └─ draft release, carrying ij-git-reflog-0.2.0-signed.zip
 
 [the draft is reviewed - the archive can be installed from it - and published]
   └─ .github/workflows/release-publish.yml
@@ -159,18 +163,25 @@ push tag v0.2.0
 The archive is built once. What the Marketplace receives is the file the draft was accepted with, not a second
 build of the same sources.
 
-### Preparing the release commit
+### What is still written by hand
 
-Three things move together, and the tag is pushed only once they are all in:
+The entries under `[Unreleased]` in [CHANGELOG.md](CHANGELOG.md), as the work is done. They are the release
+notes on GitHub and the change notes on the Marketplace both, so a release made without them says nothing about
+itself - which is why Prepare release refuses to run on an empty section rather than dating one.
 
-1. `version` in [gradle.properties](gradle.properties);
-2. `./gradlew patchChangelog`, which turns the `[Unreleased]` section of [CHANGELOG.md](CHANGELOG.md) into a
-   section for that version - it is where both the release notes and the plugin's own change notes are read
-   from;
-3. the commit, and then `git tag v<version>`.
+Everything after that is mechanical and is done for you: the version, the changelog section and its date and
+links, the commit, the tag.
 
-A tag naming a version other than the one in `gradle.properties` is refused by the workflow rather than
-released, so the two cannot come apart quietly.
+### A tag pushed by hand still works
+
+`release-draft.yml` is triggered by any `v*` tag as well as called by Prepare release, so a release can be cut
+without the Actions tab - `patchChangelog`, the version, the commit and the tag done locally. A tag naming a
+version other than the one in `gradle.properties` is refused rather than released, so the two cannot come apart
+quietly whichever way the tag was made.
+
+Why it has to be callable at all: a tag pushed by a workflow, with the token GitHub hands it, triggers no
+workflow. That is GitHub's guard against a workflow setting itself off in a circle, and it would otherwise
+leave the tag sitting there with nothing building it.
 
 ### Caveat: the first upload to the Marketplace has to be made by hand
 

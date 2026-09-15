@@ -2,9 +2,19 @@ name: Release draft
 
 # A tag is what starts a release. What it produces is a draft, carrying the signed archive that will be
 # published: accepting the draft is a decision taken with the file in hand, having been able to install it.
+#
+# Called by Prepare release as well as triggered by a tag pushed by hand. It has to be callable: a tag pushed by
+# a workflow using the token GitHub hands it sets off no workflow of its own, which is GitHub's guard against a
+# workflow triggering itself round in a circle.
 on:
   push:
     tags: ['v*']
+  workflow_call:
+    inputs:
+      tag:
+        description: The tag to build. Only for a call; a push takes the tag it was triggered by.
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -13,9 +23,12 @@ jobs:
   draft:
     name: Build, sign and draft the release
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.tag || github.ref_name }}
           fetch-depth: 0
 
       - uses: actions/setup-java@v4
@@ -29,10 +42,10 @@ jobs:
       # would be found only by whoever installed it, so it is refused here instead.
       - name: Refuse a tag that disagrees with gradle.properties
         run: |
-          tag="${GITHUB_REF_NAME#v}"
+          tag="${TAG#v}"
           version="$(sed -n 's/^version=//p' gradle.properties)"
           if [ "$tag" != "$version" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} says ${tag}, gradle.properties says ${version}"
+            echo "::error::Tag ${TAG} says ${tag}, gradle.properties says ${version}"
             exit 1
           fi
 
@@ -50,7 +63,7 @@ jobs:
       - name: Take the release notes out of the changelog
         run: |
           ./gradlew getChangelog \
-            --project-version="${GITHUB_REF_NAME#v}" \
+            --project-version="${TAG#v}" \
             --no-header --no-summary \
             --output-file=release-notes.md
 
@@ -58,8 +71,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
+          gh release create "${TAG}" \
             --draft \
-            --title "${GITHUB_REF_NAME}" \
+            --title "${TAG}" \
             --notes-file release-notes.md \
             build/distributions/*-signed.zip

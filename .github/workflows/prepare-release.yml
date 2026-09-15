@@ -1,0 +1,99 @@
+name: Prepare release
+
+# Everything mechanical about cutting a release: the version, the changelog section, the commit and the tag.
+#
+# What it does not do is decide what the release says. The entries under `[Unreleased]` in CHANGELOG.md are
+# written by hand as the work is done; this only closes that section and dates it.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, with no leading v - for example 0.2.0'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Bump the version, close the changelog, tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Carried in the environment rather than written into the script by the expression: what is typed into the
+      # dispatch form would otherwise be pasted into a shell and run.
+      - name: Refuse a version that is not one
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          case "$VERSION" in
+            v*) echo "::error::Give the version without the leading v: ${VERSION#v}"; exit 1 ;;
+          esac
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "::error::'${VERSION}' is not a version this project releases"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null; then
+            echo "::error::v${VERSION} was released already"
+            exit 1
+          fi
+
+      # A release whose notes are empty is a release nobody meant to make - the changelog entries are written as
+      # the work is done, so an empty section means the work was not written down rather than that it was nil.
+      - name: Refuse an empty Unreleased section
+        run: |
+          ./gradlew getChangelog --unreleased --no-header --no-summary --output-file=unreleased.md
+          if ! grep -q '[^[:space:]]' unreleased.md; then
+            echo "::error::The Unreleased section of CHANGELOG.md is empty; there is nothing to release"
+            exit 1
+          fi
+          rm -f unreleased.md
+
+      # A step of its own, and so a Gradle invocation of its own: getChangelog reads the file patchChangelog
+      # writes, and Gradle refuses to run the two in one build without being told which comes first.
+      - name: Bump the version and close the changelog
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          sed -i "s/^version=.*/version=${VERSION}/" gradle.properties
+          # Reads the version it has just been given, project.version being where gradle.properties lands.
+          ./gradlew patchChangelog
+          git --no-pager diff --stat
+
+      - name: Commit and tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add gradle.properties CHANGELOG.md
+          git commit -m "Release ${VERSION}"
+          git tag "v${VERSION}"
+          git push origin "HEAD:${GITHUB_REF_NAME}" "v${VERSION}"
+
+      - id: tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+
+  # Called rather than left to the tag: the tag above was pushed with the token GitHub hands a workflow, and
+  # such a push triggers nothing.
+  draft:
+    needs: prepare
+    uses: ./.github/workflows/release-draft.yml
+    with:
+      tag: ${{ needs.prepare.outputs.tag }}
+    secrets: inherit
