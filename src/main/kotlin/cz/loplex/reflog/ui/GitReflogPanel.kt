@@ -160,7 +160,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      * Requests are throttled rather than postponed: the first change of a burst schedules the read and the rest
      * fold into it, so a long-running rebase still refreshes while it runs instead of only at its end.
      */
-    private val reloadAlarm = SingleAlarm.singleEdtAlarm(REPOSITORY_CHANGE_DELAY_MS, this, Runnable { reload() })
+    private val reloadAlarm = SingleAlarm(Runnable { reload() }, REPOSITORY_CHANGE_DELAY_MS, this)
 
     /**
      * Holds the changes pane back while the selection is still moving. Every entry costs a `git show`, and
@@ -169,7 +169,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      * Postponed rather than throttled, unlike [reloadAlarm]: what matters here is the row the user stops on, not
      * the one they started from.
      */
-    private val changesAlarm = SingleAlarm.singleEdtAlarm(SELECTION_CHANGE_DELAY_MS, this, Runnable { loadChanges() })
+    private val changesAlarm = SingleAlarm(Runnable { loadChanges() }, SELECTION_CHANGE_DELAY_MS, this)
 
     /** Everything the last read returned; the table shows what passes [filter]. */
     private var entries: List<GitReflogEntry> = emptyList()
