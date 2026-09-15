@@ -2,7 +2,8 @@
 
 How to build this plugin, run it, and find your way around its sources.
 
-What the plugin *does*, and why it behaves as it does, is in [the README](README.md). Nothing here repeats it.
+What the tab *does* is in [docs/usage.md](docs/usage.md), and why it behaves as it does in
+[docs/design.md](docs/design.md). Nothing here repeats either.
 
 - [Build and test](#build-and-test) - `./gradlew test`, `buildPlugin`, `verifyPlugin`.
 - [Running the tab](#running-the-tab) - `runIde`, and the repository worth pointing it at.
@@ -72,6 +73,7 @@ Three Gradle tasks, wrapped so the IDE can start them from the gutter. Run IDE a
 .
 ├── .claude/skills/         Skills tracked with the sources, one per task worth not rediscovering
 ├── .run/                   Run/Debug configurations, described above
+├── docs/                   What the tab does, and why it does it that way
 ├── gradle/
 │   ├── wrapper/            Gradle wrapper
 │   └── libs.versions.toml  Version catalog - JUnit and nothing else
