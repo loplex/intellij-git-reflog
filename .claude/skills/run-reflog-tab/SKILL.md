@@ -66,14 +66,14 @@ DISPLAY=:99 import -window root -crop WxH+X+Y out.png   # one pane, easier to re
 Cropping to the pane under test is worth the arithmetic - a 1920x1200 screenshot of a toolbar label is mostly
 empty space, and the label is what you came for.
 
-## A trap that costs half an hour if you meet it blind
+## The ref popup opens where you left the tab
 
-**The ref popup opens on HEAD, not on the ref being shown.** This is a real fault in the tab, not an artefact of
-the virtual display. Arrow keys therefore count from HEAD wherever the tab actually is, and the list wraps around. Enter straight
-after opening selects HEAD; five Downs from a fresh open reaches the stash. Counting from the ref on screen puts
-you somewhere else entirely, which reads as the keyboard being broken rather than as a bug in the tab.
+It opens on the ref being shown, with a tick against it, so arrow keys count from there and Enter straight after
+opening confirms what is already on screen. Five Downs from `HEAD` reaches `stash`; five Downs from `stash` wrap
+round the end of the list rather than landing five below `HEAD`.
 
-Until that is fixed, check which ref is actually selected after every switch instead of assuming.
+Worth knowing because it was not always so - the popup used to open on `HEAD` whatever the tab was showing, and
+a note counting arrow keys from `HEAD` is a note written before that was fixed.
 
 ## Keep the machine to yourself
 

@@ -15,7 +15,6 @@ import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.project.DumbAware
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.util.Disposer
@@ -675,13 +674,21 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         override fun getCurrentText(): String = repository?.let { DvcsUtil.getShortRepositoryName(it) }.orEmpty()
 
         override fun createActionGroup(): ActionGroup = DefaultActionGroup(
-            repositories().map { repository ->
-                DumbAwareAction.create(DvcsUtil.getShortRepositoryName(repository)) { selectRepository(repository) }
+            repositories().map { candidate ->
+                GitReflogValueToggle(
+                    candidate,
+                    DvcsUtil.getShortRepositoryName(candidate),
+                    current = { repository },
+                    select = ::selectRepository,
+                )
             },
         )
     }
 
-    /** Lets the user pick any ref the repository holds a reflog for, grouped by what kind of ref it is. */
+    /**
+     * Lets the user pick any ref the repository holds a reflog for, grouped by what kind of ref it is, and opens
+     * on the one being shown.
+     */
     private inner class RefFilter :
         GitReflogFilterComponent(GitReflogBundle.lazyMessage("reflog.filter.ref.name")) {
 
@@ -690,10 +697,19 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         override fun createActionGroup(): ActionGroup {
             val group = DefaultActionGroup()
             var previousKind: GitReflogRef.Kind? = null
-            refs.forEach { ref ->
-                if (previousKind != null && ref.kind != previousKind) group.addSeparator(titleOf(ref.kind))
-                group.add(DumbAwareAction.create(ref.presentableName) { selectRef(ref) })
-                previousKind = ref.kind
+            refs.forEach { candidate ->
+                if (previousKind != null && candidate.kind != previousKind) {
+                    group.addSeparator(titleOf(candidate.kind))
+                }
+                group.add(
+                    GitReflogValueToggle(
+                        candidate,
+                        candidate.presentableName,
+                        current = { ref },
+                        select = ::selectRef,
+                    ),
+                )
+                previousKind = candidate.kind
             }
             return group
         }

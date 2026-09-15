@@ -3,10 +3,12 @@ package cz.loplex.reflog.ui
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionGroupUtil
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopupListener
 import com.intellij.openapi.ui.popup.LightweightWindowEvent
+import com.intellij.openapi.util.Condition
 import com.intellij.util.ui.FilterComponent
 import java.util.function.Supplier
 
@@ -66,6 +68,9 @@ internal abstract class GitReflogFilterComponent(name: Supplier<String>) :
     /**
      * Opens the popup, unless the click that asked for it is the one that has just dismissed it.
      *
+     * The popup opens on the value the filter is showing where it offers one - see [isCurrentValue] - rather than
+     * on its first item.
+     *
      * A click on a filter whose popup is up closes that popup first - it is a click outside the popup, after all
      * - and only then reaches here. Opening one again at that point puts the popup back on the same click that
      * dismissed it, which reads as the popup flickering, or as a mouse that double-clicked on its own. Swing's
@@ -84,6 +89,10 @@ internal abstract class GitReflogFilterComponent(name: Supplier<String>) :
                 DataManager.getInstance().getDataContext(this),
                 JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
                 false,
+                null,
+                -1,
+                Condition { isCurrentValue(it) },
+                null,
             )
         popup.addListener(object : JBPopupListener {
             override fun onClosed(event: LightweightWindowEvent) {
@@ -96,6 +105,16 @@ internal abstract class GitReflogFilterComponent(name: Supplier<String>) :
     }
 
     companion object {
+        /**
+         * Which item a popup opens on: the one standing for the value the filter is showing.
+         *
+         * A decision of its own so that it can be asked without a popup to ask it of, and so that it is asked in
+         * the one place all three filters open their popup from. A filter that ticks any number of its items
+         * rather than standing for one of them offers no such item, and its popup opens where it always did.
+         */
+        fun isCurrentValue(action: AnAction): Boolean =
+            action is GitReflogValueToggle<*> && action.isCurrent()
+
         /** What [FilterComponent] itself puts between the name and the value of a filter that counts as set. */
         const val NAME_SEPARATOR = ": "
 
