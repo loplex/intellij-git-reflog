@@ -9,6 +9,7 @@ What the plugin *does*, and why it behaves as it does, is in [the README](README
 - [Project layout](#project-layout) - where each kind of file lives.
 - [The build script](#the-build-script) - the three Gradle plugins, and the platform compiled against.
 - [The plugin manifest](#the-plugin-manifest) - `plugin.xml`, and the one value in it that may never change.
+- [Releasing](#releasing) - what a tag sets off, and the secrets it needs to have been given.
 
 ## Build and test
 
@@ -84,6 +85,7 @@ Three Gradle tasks, wrapped so the IDE can start them from the gutter. Run IDE a
 ├── tools/
 │   └── reflog-playground.sh  Builds a repository whose reflog covers every case the tab has
 ├── build.gradle.kts        Build configuration
+├── LICENSE                 Apache 2.0
 ├── gradle.properties       Group, version, and the Gradle caches
 ├── CHANGELOG.md            Kept by hand, in Keep a Changelog form
 └── settings.gradle.kts     Project settings
@@ -133,3 +135,66 @@ tab is contributed through.
 **`<id>` may never change.** It is what an installed plugin is recognised by, so changing it between versions
 publishes a second plugin rather than an update to the first. `rootProject.name` and `project.group` in Gradle
 are free of it and need not match.
+
+## Releasing
+
+A release is started by a tag and finished by a person. Pushing `v0.2.0` builds, signs and drafts; nothing is
+published until the draft is accepted.
+
+```
+push tag v0.2.0
+  └─ .github/workflows/release-draft.yml
+       ├─ refuses the tag if gradle.properties says a different version
+       ├─ ./gradlew check
+       ├─ ./gradlew signPlugin
+       └─ draft release, carrying ij-git-reflog-0.2.0-signed.zip
+
+[the draft is reviewed - the archive can be installed from it - and published]
+  └─ .github/workflows/release-publish.yml
+       └─ ./gradlew publishPlugin, uploading that same archive
+```
+
+The archive is built once. What the Marketplace receives is the file the draft was accepted with, not a second
+build of the same sources.
+
+### Preparing the release commit
+
+Three things move together, and the tag is pushed only once they are all in:
+
+1. `version` in [gradle.properties](gradle.properties);
+2. `./gradlew patchChangelog`, which turns the `[Unreleased]` section of [CHANGELOG.md](CHANGELOG.md) into a
+   section for that version - it is where both the release notes and the plugin's own change notes are read
+   from;
+3. the commit, and then `git tag v<version>`.
+
+A tag naming a version other than the one in `gradle.properties` is refused by the workflow rather than
+released, so the two cannot come apart quietly.
+
+### Caveat: the first upload to the Marketplace has to be made by hand
+
+`publishPlugin` updates a plugin that is already listed. It cannot create the listing: JetBrains require the
+first version of a new plugin to be uploaded through the Marketplace's own **Upload plugin** form, and it goes
+through their review before it appears. Only from the second version onwards does the workflow above do the
+whole job.
+
+### The secrets the workflows expect
+
+| Secret | What it is |
+|---|---|
+| `PUBLISH_TOKEN` | A Marketplace personal access token, from your profile page there. It is shown once |
+| `CERTIFICATE_CHAIN` | The signing certificate chain, in PEM |
+| `PRIVATE_KEY` | The signing private key, in PEM |
+| `PRIVATE_KEY_PASSWORD` | What the private key was encrypted with |
+
+The signing key is the author's rather than the plugin's: one key pair signs every plugin you publish, and a
+self-signed certificate is accepted. Generating one, if you have none:
+
+```bash
+openssl genpkey -aes-256-cbc -algorithm RSA -out private_encrypted.pem -pkeyopt rsa_keygen_bits:4096
+openssl rsa -in private_encrypted.pem -out private.pem
+openssl req -key private.pem -new -x509 -days 365 -out chain.crt
+```
+
+`chain.crt` goes into `CERTIFICATE_CHAIN`, `private.pem` into `PRIVATE_KEY`, and the password from the first
+command into `PRIVATE_KEY_PASSWORD`. Keep `private_encrypted.pem` and the password; the plugin cannot be
+updated by anyone who cannot sign with the same key.

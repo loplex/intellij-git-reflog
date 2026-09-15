@@ -1,0 +1,49 @@
+name: Publish to the Marketplace
+
+# Runs when a drafted release is published, which is the moment the release is accepted. The archive it carries
+# is the one built and signed from the tag, so what reaches the Marketplace is the file that was there to be
+# tried rather than a second build of the same sources.
+on:
+  release:
+    types: [released]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Upload the accepted archive
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Take the archive off the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build/distributions
+          gh release download "${{ github.event.release.tag_name }}" \
+            --pattern '*-signed.zip' \
+            --dir build/distributions
+          ls -l build/distributions
+
+      - name: Publish
+        env:
+          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+          # signPlugin runs as a dependency of publishPlugin and needs these, although what is uploaded is the
+          # archive named below rather than anything it produces.
+          CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
+        run: |
+          archive="$(ls build/distributions/*-signed.zip)"
+          ./gradlew publishPlugin -PpublishArchive="${archive}"

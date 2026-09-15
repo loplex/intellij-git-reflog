@@ -1,0 +1,63 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 21
+
+      # Caches ~/.gradle only. The project's own .gradle/ is left alone deliberately: a cached configuration
+      # cache entry has been seen to fail instrumentTestCode on a build that ran green without one.
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: ./gradlew check
+
+      - name: Keep the reports of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: build/reports/
+
+  verify:
+    name: Verify against the IDEs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # A job of its own because it downloads an IDE per version verified, which is minutes and gigabytes the
+      # test job has no reason to wait for.
+      - run: ./gradlew verifyPlugin
+
+      - name: Keep the verification report of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-verifier-report
+          path: build/reports/pluginVerifier/
