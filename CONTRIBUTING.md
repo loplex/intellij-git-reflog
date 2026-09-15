@@ -32,6 +32,16 @@ for every version the compatibility range covers, so it costs that again per ver
 The tests build the repositories they read out of a fixture, so they neither touch nor need a Git repository of
 your own. They do start a headless IDE, which is what most of their runtime is.
 
+The documents are checked too, by a script of their own that needs neither Gradle nor a JDK:
+
+```bash
+tools/check-doc-links.py
+```
+
+It resolves every link they make into the repository - at each other, at their own sections, at source files -
+and reports the ones that no longer land anywhere. External URLs are left alone, since they fail for reasons
+that have nothing to do with the commit. It runs in CI beside the tests.
+
 ## Running the tab
 
 Most of this tab can only be judged by looking at it. A dozen of its faults were found that way and none of them
@@ -85,6 +95,7 @@ Three Gradle tasks, wrapped so the IDE can start them from the gutter. Run IDE a
 │   │       └── messages/   Message bundle
 │   └── test/kotlin/        Tests
 ├── tools/
+│   ├── check-doc-links.py    Resolves every link the documents make into the repository
 │   └── reflog-playground.sh  Builds a repository whose reflog covers every case the tab has
 ├── build.gradle.kts        Build configuration
 ├── LICENSE                 Apache 2.0

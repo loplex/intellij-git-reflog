@@ -14,6 +14,15 @@ permissions:
   contents: read
 
 jobs:
+  docs:
+    name: Check the documentation's links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Neither Java nor Gradle: it reads Markdown and the working tree, and answers in seconds.
+      - run: tools/check-doc-links.py
+
   test:
     name: Test
     runs-on: ubuntu-latest
