@@ -1,12 +1,14 @@
 # Git Reflog
 
+[![Build](https://github.com/loplex/intellij-git-reflog/actions/workflows/build.yml/badge.svg)](https://github.com/loplex/intellij-git-reflog/actions/workflows/build.yml)
+
 *An IntelliJ IDEA plugin that puts `git reflog` in the Git tool window.*
 
 `git reflog` is the record of every movement of `HEAD` - commits, checkouts, resets, rebases, amends.\
 It is also the only place where a commit that no branch points at any more can still be found.\
 IntelliJ IDEA has no UI for it, so recovering work after a bad reset means leaving the IDE for a terminal.
 
-This plugin adds a **Reflog** tab to the Git tool window, between the Log and the Console tab.
+This plugin adds a **Reflog** tab to the Git tool window, beside the Log.
 
 ![The Reflog tab: the reflog of HEAD, the files of the selected entries, and their diff](docs/reflog-tab.png)
 
