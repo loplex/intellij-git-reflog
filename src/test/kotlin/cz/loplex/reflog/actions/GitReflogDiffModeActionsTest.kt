@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.ActionUiKind
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.KeepPopupOnPerform
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.Toggleable
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
@@ -51,13 +52,42 @@ class GitReflogDiffModeActionsTest : BasePlatformTestCase() {
         assertTrue("The switch would drop what it cannot offer", GitReflogDiffModeSwitch().shouldShowDisabledActions())
     }
 
-    /** The switch names the reading on screen, the way the tab's own filters read "Ref: HEAD". */
-    fun `test the switch names the reading it is showing`() {
+    /**
+     * The switch names the reading on screen - in short, the file pane's toolbar being as narrow as the file
+     * pane, with the full name kept for the tooltip and for the menu.
+     */
+    fun `test the switch names the reading it is showing, in short`() {
         val modes = modesFor(GitReflogDiffMode.REFLOG_STEP, GitReflogAncestry.DIVERGED, onBranch, onMaster)
 
         val presentation = updated(GitReflogDiffModeSwitch(), modes)
         assertTrue("The switch is greyed for a selection two readings fit", presentation.isEnabled)
-        assertEquals("Compare: Reflog Step", presentation.text)
+        assertEquals("Reflog Step", presentation.text)
+        // No icon: nothing in the icon set reads as "what these files are being compared as" rather than as a
+        // diff to be opened, and the drop-down arrow already says that this is a choice.
+        assertNull("The switch carries an icon that would read as a diff to open", presentation.icon)
+    }
+
+    /**
+     * What the short name leaves out is in the tooltip: the full name, said as the choice it is, and what the
+     * reading actually compares.
+     */
+    fun `test the tooltip carries the full name and what it compares`() {
+        val modes = modesFor(GitReflogDiffMode.WORKING_TREE, GitReflogAncestry.LINEAR, onMaster)
+
+        val description = updated(GitReflogDiffModeSwitch(), modes).description
+        assertNotNull("The switch says nothing on hover", description)
+        assertTrue("The tooltip does not name the reading in full: $description", "Compare: Against Working Tree" in description!!)
+        assertTrue("The tooltip does not say what is compared: $description", "working tree" in description)
+    }
+
+    /** The menu has the room the switch has not, and keeps the names a reading is first met under. */
+    fun `test the menu keeps the full names`() {
+        val modes = modesFor(GitReflogDiffMode.REFLOG_STEP, GitReflogAncestry.LINEAR, onMaster)
+
+        assertEquals(
+            listOf("Reflog Step", "Between Selected", "Selected Commits", "Against Working Tree"),
+            childrenOf(modes).map { updated(it, contextOf(modes)).text },
+        )
     }
 
     /**
@@ -93,13 +123,30 @@ class GitReflogDiffModeActionsTest : BasePlatformTestCase() {
 
         assertEquals("The picked mode was rewritten by the fallback", GitReflogDiffMode.REFLOG_STEP, modes.preferred)
         assertEquals(GitReflogDiffMode.UNION, modes.effective)
-        assertEquals("Compare: Selected Commits", updated(GitReflogDiffModeSwitch(), modes).text)
+        assertEquals("Commits", updated(GitReflogDiffModeSwitch(), modes).text)
 
         // The tick follows what is on screen rather than what was picked, or the switch would name one reading
         // and tick another.
         assertTrue("Selected Commits is not ticked", isTicked(GitReflogDiffMode.UNION, modes))
         assertFalse("Reflog Step is ticked for a selection it has no answer for", isTicked(GitReflogDiffMode.REFLOG_STEP, modes))
         assertDisabled("Reflog Step reaches past the oldest entry", GitReflogDiffMode.REFLOG_STEP, modes)
+    }
+
+    /**
+     * The menu closes on a pick, rather than staying open the way a toggle does by default.
+     *
+     * Four readings of which one is showing is a choice, not a set of boxes to tick, so there is nothing left to
+     * do in the menu once one is picked. Left open it would also go on showing the tick where it stood when it
+     * opened - nothing asks an open menu again - while the pane behind it had already changed.
+     */
+    fun `test picking a reading closes the menu`() {
+        val modes = modesFor(GitReflogDiffMode.REFLOG_STEP, GitReflogAncestry.LINEAR, onMaster)
+
+        assertEquals(
+            "The menu would stay open on a pick, leaving its tick where it was",
+            KeepPopupOnPerform.Never,
+            updated(GitReflogDiffModeAction(GitReflogDiffMode.UNION), contextOf(modes)).keepPopupOnPerform,
+        )
     }
 
     private fun modesFor(

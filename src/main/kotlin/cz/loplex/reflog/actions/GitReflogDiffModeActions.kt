@@ -6,6 +6,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.KeepPopupOnPerform
 import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.ex.ComboBoxAction
 import com.intellij.openapi.project.DumbAware
@@ -21,6 +22,25 @@ internal fun titleOf(mode: GitReflogDiffMode): String = GitReflogBundle.message(
         GitReflogDiffMode.BETWEEN_SELECTED -> "reflog.diff.mode.between"
         GitReflogDiffMode.UNION -> "reflog.diff.mode.union"
         GitReflogDiffMode.WORKING_TREE -> "reflog.diff.mode.working.tree"
+    },
+)
+
+/**
+ * Name of [mode] as the switch writes it, which is shorter than what the menu writes.
+ *
+ * The switch stands on the file pane's toolbar, which is as narrow as the file pane - and that pane gets what the
+ * table leaves it, which is not much. A name that does not fit is a name that is not shown at all until the mouse
+ * goes looking for it, so the switch says the shortest thing that still tells the four apart, and the icon beside
+ * it carries what the word "Compare" was carrying.
+ *
+ * The menu has room and keeps the full names, which is where a reading being met for the first time is read.
+ */
+internal fun shortTitleOf(mode: GitReflogDiffMode): String = GitReflogBundle.message(
+    when (mode) {
+        GitReflogDiffMode.REFLOG_STEP -> "reflog.diff.mode.step.short"
+        GitReflogDiffMode.BETWEEN_SELECTED -> "reflog.diff.mode.between.short"
+        GitReflogDiffMode.UNION -> "reflog.diff.mode.union.short"
+        GitReflogDiffMode.WORKING_TREE -> "reflog.diff.mode.working.tree.short"
     },
 )
 
@@ -54,6 +74,10 @@ internal class GitReflogDiffModeAction(private val mode: GitReflogDiffMode) : To
         super.update(e)
         val modes = e.getData(GitReflogDataKeys.DIFF_MODES)
         e.presentation.isEnabled = modes != null && mode in modes.applicable
+        // Picking a reading is picking one of four, not ticking one of many, so the menu has done its job and
+        // closes. Left open - which is what a toggle does by default - it goes on showing the tick where it was
+        // when it opened, since nothing asks it again, while the pane behind it has already changed.
+        e.presentation.keepPopupOnPerform = KeepPopupOnPerform.Never
     }
 
     override fun isSelected(e: AnActionEvent): Boolean = e.getData(GitReflogDataKeys.DIFF_MODES)?.effective == mode
@@ -81,12 +105,19 @@ internal class GitReflogDiffModeSwitch : ComboBoxAction(), DumbAware {
         // Nothing on offer is a state of its own, and the switch says so rather than naming the mode that was
         // picked: there is no comparison on screen for it to be naming.
         e.presentation.isEnabled = modes != null && modes.applicable.isNotEmpty()
-        // Named as well as valued, the way the tab's own filters read "Ref: HEAD": on its own, "Reflog Step"
-        // says nothing about what it is a choice between.
-        e.presentation.text = shown
-            ?.let { GitReflogBundle.message("reflog.diff.mode.label", titleOf(it)) }
-            ?: GitReflogBundle.message("reflog.diff.mode.none")
-        e.presentation.description = shown?.let(::descriptionOf)
+        // The short name on its own. Written out as "Compare: Against Working Tree" the switch outgrew the pane
+        // it sits on, and a label too long to fit is not shortened by a toolbar - it is dropped, until the mouse
+        // goes looking for it. No icon either: the arrow already says this is a choice, and no icon for "what
+        // these files are being compared as" reads as that rather than as some diff to be opened.
+        e.presentation.text = shown?.let(::shortTitleOf) ?: GitReflogBundle.message("reflog.diff.mode.none")
+        // The tooltip is where the full name lives, alongside what the reading actually compares.
+        e.presentation.description = shown?.let {
+            GitReflogBundle.message(
+                "reflog.diff.mode.tooltip",
+                GitReflogBundle.message("reflog.diff.mode.label", titleOf(it)),
+                descriptionOf(it),
+            )
+        }
     }
 
     /**

@@ -3,7 +3,10 @@ package cz.loplex.reflog.ui
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionGroupUtil
+import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.ui.popup.JBPopupListener
+import com.intellij.openapi.ui.popup.LightweightWindowEvent
 import com.intellij.util.ui.FilterComponent
 import java.util.function.Supplier
 
@@ -32,6 +35,12 @@ internal abstract class GitReflogFilterComponent(name: Supplier<String>) :
 
     private val changeListeners = mutableListOf<Runnable>()
 
+    /** The popup this filter has up, if it has one. */
+    private var openPopup: JBPopup? = null
+
+    /** When this filter's popup was last dismissed, against which a fresh opening is measured. */
+    private var popupClosedAt = 0L
+
     init {
         setShowPopupAction(Runnable { showPopup() })
     }
@@ -54,8 +63,22 @@ internal abstract class GitReflogFilterComponent(name: Supplier<String>) :
 
     final override fun createResetAction(): Runnable = Runnable { }
 
+    /**
+     * Opens the popup, unless the click that asked for it is the one that has just dismissed it.
+     *
+     * A click on a filter whose popup is up closes that popup first - it is a click outside the popup, after all
+     * - and only then reaches here. Opening one again at that point puts the popup back on the same click that
+     * dismissed it, which reads as the popup flickering, or as a mouse that double-clicked on its own. Swing's
+     * own combo box popups guard against exactly this, by remembering when theirs was last closed.
+     *
+     * Two guards, because a popup asked for twice over can arrive either way round: one for an opening while the
+     * previous popup is still up, one for an opening that treads on the heels of its closing.
+     */
     private fun showPopup() {
-        JBPopupFactory.getInstance()
+        if (openPopup?.isDisposed == false) return
+        if (System.currentTimeMillis() - popupClosedAt < REOPEN_GUARD_MS) return
+
+        val popup = JBPopupFactory.getInstance()
             .createActionGroupPopup(
                 null,
                 ActionGroupUtil.forceRecursiveUpdateInBackground(createActionGroup()),
@@ -63,11 +86,26 @@ internal abstract class GitReflogFilterComponent(name: Supplier<String>) :
                 JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
                 false,
             )
-            .showUnderneathOf(this)
+        popup.addListener(object : JBPopupListener {
+            override fun onClosed(event: LightweightWindowEvent) {
+                popupClosedAt = System.currentTimeMillis()
+                openPopup = null
+            }
+        })
+        openPopup = popup
+        popup.showUnderneathOf(this)
     }
 
     private companion object {
         /** What [FilterComponent] itself puts between the name and the value of a filter that counts as set. */
         const val NAME_SEPARATOR = ": "
+
+        /**
+         * How soon after a popup closed an opening is taken to be the same click that closed it.
+         *
+         * Long enough to cover a click travelling from the popup's dismissal to this component, short enough that
+         * a user who closed a popup and meant to open it again is never refused.
+         */
+        const val REOPEN_GUARD_MS = 200L
     }
 }

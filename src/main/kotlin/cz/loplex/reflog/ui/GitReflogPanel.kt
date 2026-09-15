@@ -53,10 +53,14 @@ import git4idea.repo.GitRepositoryChangeListener
 import git4idea.repo.GitRepositoryManager
 import kotlinx.coroutines.Job
 import java.awt.BorderLayout
+import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
+import javax.swing.Box
 import javax.swing.JPanel
+import javax.swing.JSeparator
+import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 
 /**
@@ -106,6 +110,8 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      */
     private val loadMoreLink = ActionLink(GitReflogBundle.message("reflog.load.more")) { loadMore() }.apply {
         toolTipText = GitReflogBundle.message("reflog.load.more.tooltip")
+        // Carried here rather than by the row, so that the space in front of it is hidden along with it.
+        border = JBUI.Borders.emptyLeft(LINK_GAP_BEFORE)
         isVisible = false
     }
     private val repositoryFilter = RepositoryFilter()
@@ -367,10 +373,30 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             add(searchField)
             filters.forEach { add(it.initUi()) }
         }
-        val right = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), JBUI.scale(2))).apply {
+        // No gap of the row's own: the toolbar at the end of it brings an inset already, so a gap shared out
+        // evenly leaves the separator further from the icons than from the count. Each piece carries the space it
+        // wants on its left instead, which also means the space in front of Load More goes away with Load More.
+        val right = JPanel(FlowLayout(FlowLayout.RIGHT, 0, JBUI.scale(2))).apply {
             isOpaque = false
             add(countLabel)
             add(loadMoreLink)
+            // What has been read on one side, what to do with the tab on the other. The toolbar drew this line
+            // itself while Load More was an action on it; drawn here it also stands when Load More is hidden,
+            // the count on its left being reason enough to keep the two halves of the row apart.
+            //
+            // Given a height outright, because a row laid out by its contents has none to lend: the platform's
+            // own SeparatorComponent asks for a height of zero when stood on end, on the expectation of being
+            // stretched by whatever holds it, and is drawn as a gap where nothing stretches it.
+            // A strut rather than a border on the separator: the separator is given its size outright, for want
+            // of a row that would stretch it, and a size given outright leaves no room for a border to be added
+            // to. Standing on its own the gap also holds when Load More is hidden.
+            add(Box.createHorizontalStrut(JBUI.scale(SEPARATOR_GAP_BEFORE)))
+            add(
+                JSeparator(SwingConstants.VERTICAL).apply {
+                    preferredSize = Dimension(preferredSize.width, JBUI.scale(SEPARATOR_HEIGHT))
+                },
+            )
+            add(Box.createHorizontalStrut(JBUI.scale(SEPARATOR_GAP_AFTER)))
             add(actions.component)
         }
         return JPanel(BorderLayout()).apply {
@@ -731,6 +757,12 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         private const val CONTEXT_MENU_PLACE = "GitReflogPopup"
         private const val CONTEXT_MENU_GROUP_ID = "GitReflog.ContextMenu"
         private const val SEARCH_FIELD_COLUMNS = 16
+        /** How tall the line between the two halves of the toolbar row stands, the row lending it none. */
+        private const val SEPARATOR_HEIGHT = 16
+        private const val LINK_GAP_BEFORE = 8
+        private const val SEPARATOR_GAP_BEFORE = 8
+        /** Smaller than the gap before it: the toolbar that follows brings an inset of its own. */
+        private const val SEPARATOR_GAP_AFTER = 1
         /**
          * Where the field's history is kept between sessions. Not private, so that a test can put back what a
          * run of it leaves in the application's own properties.

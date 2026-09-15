@@ -45,7 +45,17 @@ private class ReflogColumn(
     override fun getRenderer(item: GitReflogEntry?): TableCellRenderer? = cellRenderer
 }
 
-/** Renders a value in the muted style the platform uses for secondary information such as hashes. */
+/**
+ * Renders a value in the muted style the platform uses for secondary information such as hashes.
+ *
+ * The background is taken from the table rather than left to the renderer: a renderer of this kind picks its own,
+ * and picks one that dims when the table loses focus, where the columns the table draws for itself do not. So
+ * clicking into the file pane turned a selected row two-tone - these two columns dimming while the rest of the
+ * row stayed as it was.
+ *
+ * Whether a table ought to dim a selection it no longer has the focus for is a question with an answer either
+ * way; what it must not do is answer it differently in different columns of the same row.
+ */
 private val grayedRenderer = object : ColoredTableCellRenderer() {
     override fun customizeCellRenderer(
         table: JTable,
@@ -55,6 +65,7 @@ private val grayedRenderer = object : ColoredTableCellRenderer() {
         row: Int,
         column: Int,
     ) {
+        background = if (selected) table.selectionBackground else table.background
         append(value as? String ?: "", SimpleTextAttributes.GRAYED_ATTRIBUTES)
     }
 }
