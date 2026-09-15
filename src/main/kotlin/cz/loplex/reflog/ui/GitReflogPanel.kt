@@ -45,7 +45,7 @@ import cz.loplex.reflog.GitReflogReader
 import cz.loplex.reflog.GitReflogRef
 import cz.loplex.reflog.GitReflogSelection
 import cz.loplex.reflog.GitReflogService
-import cz.loplex.reflog.actions.showReflogEntryDiff
+import cz.loplex.reflog.actions.showReflogDiff
 import git4idea.GitVcs
 import git4idea.branch.GitBranchUtil
 import git4idea.repo.GitRepository
@@ -461,8 +461,10 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             override fun onDoubleClick(event: MouseEvent): Boolean {
                 if (table.rowAtPoint(event.point) < 0) return false
                 val repository = repository ?: return false
-                val entry = table.selectedObjects.singleOrNull() ?: return false
-                showReflogEntryDiff(project, repository, entry)
+                // What the pane is showing, which is what Show Diff opens too - a double click on an entry is
+                // the same gesture said faster, and the two must not answer differently.
+                val mode = diffModes().effective ?: return false
+                showReflogDiff(project, repository, selection(), mode)
                 return true
             }
         }.installOn(table)
@@ -627,6 +629,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         sink[GitReflogDataKeys.SELECTED_ENTRIES] = selected
         sink[GitReflogDataKeys.HAS_MORE] = hasMore
         sink[GitReflogDataKeys.DIFF_MODES] = diffModes()
+        sink[GitReflogDataKeys.SELECTION] = selection()
         sink[VcsDataKeys.VCS] = GitVcs.getKey()
         sink[VcsDataKeys.VCS_REVISION_NUMBER] = selected.firstOrNull()?.revisionNumber
         sink[VcsDataKeys.VCS_REVISION_NUMBERS] = selected.map { it.revisionNumber }.toTypedArray()

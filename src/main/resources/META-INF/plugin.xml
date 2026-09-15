@@ -81,6 +81,10 @@
                     class="cz.loplex.reflog.actions.GitReflogShowDiffAction"
                     icon="AllIcons.Actions.Diff"
                     use-shortcut-of="Diff.ShowDiff"/>
+            <!-- The other three readings, opened in the diff viewer without changing the one the file pane is
+                 set to: asking what another comparison would say is a question asked in passing. -->
+            <group id="GitReflog.ShowDiffModes"
+                   class="cz.loplex.reflog.actions.GitReflogShowDiffModeGroup"/>
             <!-- Also here, not only on the file pane: the entries being compared are selected in this table, so
                  this is where the question is asked. -->
             <reference ref="GitReflog.DiffModes"/>

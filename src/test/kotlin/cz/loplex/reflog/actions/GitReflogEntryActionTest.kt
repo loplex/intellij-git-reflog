@@ -10,9 +10,9 @@ import cz.loplex.reflog.ui.GitReflogDataKeys
 /**
  * Covers when the actions that act on a reflog entry are offered.
  *
- * Checkout Revision, New Branch from Here, Reset Current Branch to Here and Show Diff all move or read a single
- * point in history, so all four ask the same question of the context: exactly one entry, in a repository, in a
- * project. Nothing about them says so at the point of use - the rule lives once, in the base class - which is
+ * Checkout Revision, New Branch from Here and Reset Current Branch to Here all move to a single point in
+ * history, so all three ask the same question of the context: exactly one entry, in a repository, in a project.
+ * (Show Diff used to be among them, and now follows Compare instead, which answers a selection of any size.) Nothing about them says so at the point of use - the rule lives once, in the base class - which is
  * what makes it worth pinning down: relaxing it would leave "reset to this entry" offered for a selection with
  * no single "this" in it, and nothing would say a word.
  */
@@ -49,10 +49,6 @@ class GitReflogEntryActionTest : GitReflogRepositoryTest() {
         assertFalse(
             "Reset Current Branch to Here is offered for a selection with no single entry in it",
             updated(GitReflogResetAction(), contextOf(several)).isEnabled,
-        )
-        assertFalse(
-            "Show Diff is offered for a selection with no single entry in it",
-            updated(GitReflogShowDiffAction(), contextOf(several)).isEnabled,
         )
     }
 

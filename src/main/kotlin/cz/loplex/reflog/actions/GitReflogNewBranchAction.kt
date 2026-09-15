@@ -14,7 +14,7 @@ import git4idea.validators.GitNewBranchNameValidator
  */
 internal class GitReflogNewBranchAction : GitReflogEntryAction() {
 
-    override fun perform(selection: GitReflogSelection) {
+    override fun perform(selection: GitReflogEntryTarget) {
         val repositories = listOf(selection.repository)
         val name = Messages.showInputDialog(
             selection.project,
