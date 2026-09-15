@@ -16,6 +16,8 @@
   the diff of the file selected among them.
 - Preview Diff on the Right and Preview Diff at the Bottom on the toolbar, the platform's pair of preview
   buttons: they place the diff pane, and hide it when neither is pressed.
+- Show Changed Files on the toolbar, which puts the file pane away and brings it back, so that either pane can
+  be had without the other and the table can be had without both.
 - The file pane's own toolbar and menu, as in the Log: Show Diff, Group By, Revert, Show History for Revision,
   and the platform's repository menu on right click.
 - Compare on the file pane, choosing what the files of the selected entries are compared against: the reflog

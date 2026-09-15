@@ -35,12 +35,25 @@ class GitReflogFilePaneTest : BasePlatformTestCase() {
         assertTrue("Compare is not on the file pane's context menu: $popup", "GitReflog.DiffModes" in popup)
     }
 
-    /** The two buttons that place the diff pane belong to the tab's toolbar, next to Refresh. */
-    fun testTabToolbarCarriesTheDiffPreviewButtons() {
+    /** What is on screen below the table is placed from the tab's toolbar, next to Refresh. */
+    fun testTabToolbarCarriesTheButtonsThatPlaceThePanes() {
         val ids = idsOf(ActionManager.getInstance().getAction("GitReflog.Toolbar"))
 
+        assertTrue("Show Changed Files is not on the tab's toolbar: $ids", "GitReflog.ShowFiles" in ids)
         assertTrue("Preview on the right is not on the tab's toolbar: $ids", "GitReflog.PreviewOnTheRight" in ids)
         assertTrue("Preview at the bottom is not on the tab's toolbar: $ids", "GitReflog.PreviewAtTheBottom" in ids)
+    }
+
+    /** Either pane can be put away on its own, and the table keeps the room when both are. */
+    fun testEitherPaneCanBePutAwayOnItsOwn() {
+        val panel = GitReflogPanel(project)
+        Disposer.register(testRootDisposable, panel)
+
+        panel.isFilePaneVisible = false
+        assertNull("The file pane is still in the tab", UIUtil.findComponentOfType(panel, ChangesBrowserBase::class.java))
+
+        panel.isFilePaneVisible = true
+        assertNotNull("The file pane did not come back", UIUtil.findComponentOfType(panel, ChangesBrowserBase::class.java))
     }
 
     private fun idsOf(action: AnAction): List<String> {

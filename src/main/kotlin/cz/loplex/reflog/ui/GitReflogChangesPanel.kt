@@ -31,6 +31,23 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
     private var diffViewer: DiffEditorViewer? = null
 
     /**
+     * Whether the file pane is shown, remembered across sessions like the diff pane's own placement.
+     *
+     * The list of files and the diff of one of them answer different questions - which files an entry touched,
+     * and what it did to one of them - so either is worth having without the other, and the table on its own is
+     * worth having without both.
+     */
+    var isFilePaneVisible: Boolean
+        get() = PropertiesComponent.getInstance().getBoolean(SHOW_FILE_PANE, true)
+        set(value) {
+            PropertiesComponent.getInstance().setValue(SHOW_FILE_PANE, value, true)
+            updateFilePane()
+        }
+
+    /** Whether either pane is up, which is what makes reading an entry's changes worth doing at all. */
+    val isAnyPaneVisible: Boolean get() = isFilePaneVisible || isDiffPreviewVisible
+
+    /**
      * Whether the diff pane is shown, remembered across sessions. Kept outside the project so that the tab opens
      * the way the user last left it in any project, which is how the Log remembers its own preview.
      */
@@ -57,9 +74,9 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
     init {
         diffSplitter.orientation = isDiffPreviewAtBottom
         filesSplitter.firstComponent = mainComponent
-        filesSplitter.secondComponent = browser
         diffSplitter.firstComponent = filesSplitter
         addToCenter(diffSplitter)
+        updateFilePane()
         updateDiffPreview()
     }
 
@@ -78,6 +95,16 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
         browser.shutdown()
         diffSplitter.dispose()
         filesSplitter.dispose()
+    }
+
+    /**
+     * Brings the file pane in line with [isFilePaneVisible].
+     *
+     * Taken out of the splitter rather than merely hidden, so that the table is given the width back; the browser
+     * itself stays alive either way, being what the diff pane follows the selection of.
+     */
+    private fun updateFilePane() {
+        filesSplitter.secondComponent = if (isFilePaneVisible) browser else null
     }
 
     /**
@@ -116,6 +143,7 @@ internal class GitReflogChangesPanel(project: Project, mainComponent: JComponent
         const val DIFF_PLACE = "GitReflogDiffPreview"
         const val FILES_SPLITTER_PROPORTION = "GitReflog.files.splitter.proportion"
         const val DIFF_SPLITTER_PROPORTION = "GitReflog.diff.splitter.proportion"
+        const val SHOW_FILE_PANE = "GitReflog.showFilePane"
         const val SHOW_DIFF_PREVIEW = "GitReflog.showDiffPreview"
         const val DIFF_PREVIEW_AT_BOTTOM = "GitReflog.diffPreviewAtBottom"
     }

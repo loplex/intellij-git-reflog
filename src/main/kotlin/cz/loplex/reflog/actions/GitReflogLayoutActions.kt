@@ -8,6 +8,30 @@ import cz.loplex.reflog.ui.GitReflogDataKeys
 import cz.loplex.reflog.ui.GitReflogPanel
 
 /**
+ * Shows the list of files the selected entry changed, or puts it away.
+ *
+ * A button of its own rather than a third state of the diff buttons: which files an entry touched and what it did
+ * to one of them are separate questions, so either answer is worth having without the other - and the table on its
+ * own, with neither, is worth having too.
+ */
+internal class GitReflogShowFilesAction : ToggleAction(), DumbAware {
+
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
+
+    override fun update(e: AnActionEvent) {
+        super.update(e)
+        e.presentation.isEnabled = e.getData(GitReflogDataKeys.PANEL) != null
+    }
+
+    override fun isSelected(e: AnActionEvent): Boolean =
+        e.getData(GitReflogDataKeys.PANEL)?.isFilePaneVisible == true
+
+    override fun setSelected(e: AnActionEvent, state: Boolean) {
+        e.getData(GitReflogDataKeys.PANEL)?.isFilePaneVisible = state
+    }
+}
+
+/**
  * One of the two buttons that place the diff pane, the pair the platform's own preview toolbars are built from.
  *
  * Between them they cover all three states in a single click: neither pressed hides the diff pane, either one

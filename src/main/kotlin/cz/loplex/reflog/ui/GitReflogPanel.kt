@@ -149,11 +149,20 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         }
 
 
+    /** Whether the list of files the selected entry changed is shown at all. */
+    var isFilePaneVisible: Boolean
+        get() = changesPanel.isFilePaneVisible
+        set(value) {
+            changesPanel.isFilePaneVisible = value
+            reloadChanges()
+        }
+
     /** Whether the diff of the file selected in the file pane is shown at all. */
     var isDiffPreviewVisible: Boolean
         get() = changesPanel.isDiffPreviewVisible
         set(value) {
             changesPanel.isDiffPreviewVisible = value
+            reloadChanges()
         }
 
     /** Whether that diff spans the bottom of the tab rather than its right-hand side. */
@@ -417,6 +426,13 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         // What a commit changed cannot change, but what the working tree holds can, so that one reading is read
         // again every time the panel is asked to - after a refresh among other things, which is what follows the
         // commits and checkouts that move the tree under it.
+        // With both panes away there is nobody for the read to answer, and the selection still moves.
+        if (!changesPanel.isAnyPaneVisible) {
+            changesJob?.cancel()
+            shownChangesFor = null
+            return
+        }
+
         val key = ChangesKey(selection.selected.map { it.identity }, diffMode)
         if (key == shownChangesFor && diffMode != GitReflogDiffMode.WORKING_TREE) return
 
@@ -467,6 +483,12 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             else ->
                 GitReflogBundle.message("reflog.changes.empty", selection.newest?.shortHash.orEmpty())
         }
+    }
+
+    /** Reads the changes again for a pane that has just been brought back, having gone unread while it was away. */
+    private fun reloadChanges() {
+        shownChangesFor = null
+        loadChanges()
     }
 
     private fun showChangesEmptyText(text: String) {

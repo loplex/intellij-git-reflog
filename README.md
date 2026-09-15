@@ -100,6 +100,17 @@ Whether the selected entries sit on one line of history takes a `git merge-base 
 pair to answer, so it is asked only once the answer can change which comparison is shown - never on the way past
 a row.
 
+**Show Changed Files** on the toolbar puts the file pane away and brings it back. It is a button of its own
+rather than a third state of the diff buttons below, because which files an entry touched and what it did to one
+of them are separate questions: either answer is worth having without the other, and the table on its own, with
+neither pane, is worth having too. With both away nothing is read at all - there is nobody for the read to
+answer, and the selection still moves.
+
+The diff pane is worth having without the file pane in particular, which is less obvious than it sounds. With
+nothing selected among the files the platform hands the diff every change of the entry rather than none, so the
+pane becomes the entry's whole diff at the width of the tab, paged through with the diff viewer's own navigation
+instead of by clicking a list. What is given up is jumping straight to a named file.
+
 The diff pane is placed from the toolbar, by the platform's pair of preview buttons - **Preview Diff on the
 Right** and **Preview Diff at the Bottom**. Between them they cover all three states in a single click: neither
 pressed means no diff pane, either one pressed shows it on that side, and pressing the one already down hides it

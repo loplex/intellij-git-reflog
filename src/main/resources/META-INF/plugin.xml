@@ -40,6 +40,9 @@
 
     <actions>
         <group id="GitReflog.Toolbar">
+            <action id="GitReflog.ShowFiles"
+                    class="cz.loplex.reflog.actions.GitReflogShowFilesAction"
+                    icon="AllIcons.Actions.ListFiles"/>
             <!-- The platform's pair of preview buttons: one per side, neither pressed meaning no diff pane. -->
             <action id="GitReflog.PreviewOnTheRight"
                     class="cz.loplex.reflog.actions.GitReflogPreviewOnTheRightAction"
