@@ -27,6 +27,7 @@ import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.PopupHandler
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.SearchTextField
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.TableUtil
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.table.TableView
@@ -91,6 +92,22 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
      */
     private val searchField = SearchTextField(true, SEARCH_HISTORY)
     private val countLabel = JBLabel()
+
+    /**
+     * Reads another page of older records.
+     *
+     * A link beside the count rather than a button on the toolbar. What it says is about what has been read, not
+     * about how the tab is laid out, so it belongs with the number it moves - and being drawn by this panel it
+     * appears the moment a read comes back, where an action waits to be asked by a toolbar that has no way of
+     * knowing that git answered.
+     *
+     * Hidden unless a read came back full, which is the only case in which there may be more to read at all. The
+     * filters cannot help there: they run over the entries already read.
+     */
+    private val loadMoreLink = ActionLink(GitReflogBundle.message("reflog.load.more")) { loadMore() }.apply {
+        toolTipText = GitReflogBundle.message("reflog.load.more.tooltip")
+        isVisible = false
+    }
     private val repositoryFilter = RepositoryFilter()
     private val refFilter = RefFilter()
     private val actionKindFilter = ActionKindFilter()
@@ -292,6 +309,9 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         tableModel.items = ArrayList()
         table.emptyText.text = text
         countLabel.text = ""
+        // Nothing was read, so there is nothing to read more of - a repository with no reflog, or one that could
+        // not be read at all.
+        loadMoreLink.isVisible = false
         updateFilters()
     }
 
@@ -313,6 +333,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
             else -> GitReflogBundle.message("reflog.status.no.match")
         }
         countLabel.text = countTextFor(shown.size, entries.size, hasMore)
+        loadMoreLink.isVisible = hasMore
 
         updateFilters()
     }
@@ -349,6 +370,7 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         val right = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), JBUI.scale(2))).apply {
             isOpaque = false
             add(countLabel)
+            add(loadMoreLink)
             add(actions.component)
         }
         return JPanel(BorderLayout()).apply {

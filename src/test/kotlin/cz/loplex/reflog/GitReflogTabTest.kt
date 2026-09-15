@@ -12,6 +12,8 @@ import cz.loplex.reflog.ui.GitReflogContentProvider
 import cz.loplex.reflog.ui.GitReflogContentVisibilityPredicate
 import cz.loplex.reflog.ui.GitReflogDisplayNameSupplier
 import javax.swing.JPanel
+import com.intellij.ui.components.ActionLink
+import com.intellij.util.ui.UIUtil
 import cz.loplex.reflog.ui.GitReflogPanel
 import cz.loplex.reflog.ui.countTextFor
 
@@ -34,7 +36,6 @@ class GitReflogTabTest : BasePlatformTestCase() {
 
         assertNotNull(actionManager.getAction("GitReflog.Toolbar"))
         assertNotNull(actionManager.getAction("GitReflog.ContextMenu"))
-        assertNotNull(actionManager.getAction("GitReflog.LoadMore"))
         assertNotNull(actionManager.getAction("GitReflog.ChangesBrowser.Toolbar"))
         assertNotNull(actionManager.getAction("GitReflog.ChangesBrowser.Popup"))
         assertNotNull(actionManager.getAction("GitReflog.PreviewOnTheRight"))
@@ -102,6 +103,22 @@ class GitReflogTabTest : BasePlatformTestCase() {
     /** The name the tab is looked up by has to be the name it is drawn under. */
     fun testTheTabIsNamedWhatThePanelIsLookedUpBy() {
         assertEquals(GitReflogPanel.TAB_NAME, GitReflogDisplayNameSupplier().get())
+    }
+
+    /**
+     * Load More is drawn by the panel beside the count, not contributed as an action, so that it appears the
+     * moment a read comes back rather than whenever a toolbar next gets around to asking its actions.
+     *
+     * Which also means nothing but the panel can show it: a tab with nothing read has nothing to read more of.
+     */
+    fun testLoadMoreIsDrawnByThePanelAndStartsHidden() {
+        val panel = GitReflogPanel(project)
+        Disposer.register(testRootDisposable, panel)
+
+        val link = UIUtil.findComponentOfType(panel, ActionLink::class.java)
+        assertNotNull("The tab has no Load More link", link)
+        assertEquals("Load More", link!!.text)
+        assertFalse("Load More is offered before anything has been read", link.isVisible)
     }
 
     fun testPanelBuildsWithoutAnyRepository() {

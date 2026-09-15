@@ -39,13 +39,10 @@
     </extensions>
 
     <actions>
+        <!-- Load More is not here: it is drawn beside the count of entries read, being about what has been read
+             rather than about how the tab is laid out, and it has to appear the moment a read comes back rather
+             than whenever the action system next gets around to asking. -->
         <group id="GitReflog.Toolbar">
-            <!-- First in the row, which puts it against the count of entries read: the two say one thing between
-                 them, and clicking it moves the count. Last in the row it instead sat against Refresh, where a
-                 button carrying text and no icon reads as a label belonging to the icon beside it. -->
-            <action id="GitReflog.LoadMore"
-                    class="cz.loplex.reflog.actions.GitReflogLoadMoreAction"/>
-            <separator/>
             <action id="GitReflog.ShowFiles"
                     class="cz.loplex.reflog.actions.GitReflogShowFilesAction"
                     icon="AllIcons.Actions.ListFiles"/>
