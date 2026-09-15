@@ -8,6 +8,8 @@ IntelliJ IDEA has no UI for it, so recovering work after a bad reset means leavi
 
 This plugin adds a **Reflog** tab to the Git tool window, between the Log and the Console tab.
 
+![The Reflog tab: the reflog of HEAD, the files of the selected entries, and their diff](docs/reflog-tab.png)
+
 ## What the tab gives you
 
 - Every reflog entry of every ref the repository has logged - `HEAD`, branches, remote-tracking branches, the

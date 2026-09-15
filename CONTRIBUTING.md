@@ -73,7 +73,7 @@ Three Gradle tasks, wrapped so the IDE can start them from the gutter. Run IDE a
 .
 ├── .claude/skills/         Skills tracked with the sources, one per task worth not rediscovering
 ├── .run/                   Run/Debug configurations, described above
-├── docs/                   What the tab does, and why it does it that way
+├── docs/                   usage.md, design.md, and the screenshot the README shows
 ├── gradle/
 │   ├── wrapper/            Gradle wrapper
 │   └── libs.versions.toml  Version catalog - JUnit and nothing else
