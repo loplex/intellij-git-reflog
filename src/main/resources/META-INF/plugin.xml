@@ -40,6 +40,12 @@
 
     <actions>
         <group id="GitReflog.Toolbar">
+            <!-- First in the row, which puts it against the count of entries read: the two say one thing between
+                 them, and clicking it moves the count. Last in the row it instead sat against Refresh, where a
+                 button carrying text and no icon reads as a label belonging to the icon beside it. -->
+            <action id="GitReflog.LoadMore"
+                    class="cz.loplex.reflog.actions.GitReflogLoadMoreAction"/>
+            <separator/>
             <action id="GitReflog.ShowFiles"
                     class="cz.loplex.reflog.actions.GitReflogShowFilesAction"
                     icon="AllIcons.Actions.ListFiles"/>
@@ -55,9 +61,6 @@
                     class="cz.loplex.reflog.actions.GitReflogRefreshAction"
                     icon="AllIcons.Actions.Refresh"
                     use-shortcut-of="Refresh"/>
-            <!-- No icon: in the toolbar the action shows its text, which is what says a page was left unread. -->
-            <action id="GitReflog.LoadMore"
-                    class="cz.loplex.reflog.actions.GitReflogLoadMoreAction"/>
         </group>
 
         <!-- Toolbar and context menu of the file pane. Show Diff and Group By come from the platform's browser
