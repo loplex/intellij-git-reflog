@@ -127,4 +127,51 @@ class GitReflogTabTest : BasePlatformTestCase() {
 
         assertNull("A project without a Git repository has nothing to show", panel.repository)
     }
+
+    /**
+     * Each ref is read from its first page the first time it is shown, and from as far as it had been read on
+     * every return to it.
+     *
+     * A ref read back to its first page on every switch made a glance at the stash cost whoever had loaded three
+     * pages of HEAD those three pages, and the older entries they were looking for with them.
+     *
+     * No repository is needed: how far a ref has been read is the panel's own bookkeeping, and the read it asks
+     * for goes nowhere without one.
+     */
+    fun testEachRefIsReadFromAsFarAsItHadBeenRead() {
+        val panel = GitReflogPanel(project)
+        Disposer.register(testRootDisposable, panel)
+
+        val page = GitReflogReader.PAGE_SIZE
+        assertEquals("A ref starts on something other than its first page", page, panel.limit)
+
+        panel.loadMore()
+        panel.loadMore()
+        assertEquals("Load More did not ask for the pages behind the first", 3 * page, panel.limit)
+
+        panel.selectRef(STASH)
+        assertEquals("A ref shown for the first time did not start on its first page", page, panel.limit)
+
+        panel.selectRef(GitReflogRef.HEAD)
+        assertEquals("Coming back to a ref forgot how far it had been read", 3 * page, panel.limit)
+    }
+
+    /** Another repository is another set of refs, so nothing of what was read of the previous one's carries over. */
+    fun testAnotherRepositoryStartsEveryRefOverAgain() {
+        val panel = GitReflogPanel(project)
+        Disposer.register(testRootDisposable, panel)
+
+        panel.loadMore()
+        panel.selectRepository(null)
+
+        assertEquals(
+            "A repository kept what had been read of another one's refs",
+            GitReflogReader.PAGE_SIZE,
+            panel.limit,
+        )
+    }
+
+    private companion object {
+        val STASH = GitReflogRef("refs/stash")
+    }
 }

@@ -148,8 +148,18 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
     /** Refs the current repository has a reflog for, as of the last read. */
     private var refs: List<GitReflogRef> = listOf(GitReflogRef.HEAD)
 
-    /** How many records the next read asks git for; raised a page at a time by [loadMore]. */
-    private var limit = GitReflogReader.PAGE_SIZE
+    /**
+     * How many records the read of a ref asks git for, for every ref read past its first page.
+     *
+     * Kept per ref rather than dropped on every switch. Another reflog is another length, so a ref is read a
+     * page at a time from its newest record; but a ref come *back* to is one whose older records have been
+     * asked for already, and starting it over again would make a glance at the stash cost the reader the pages
+     * of HEAD they had loaded to look at.
+     */
+    private val limits = mutableMapOf<GitReflogRef, Int>()
+
+    /** How many records the next read of the ref on screen asks git for; raised a page at a time by [loadMore]. */
+    val limit: Int get() = limits[ref] ?: GitReflogReader.PAGE_SIZE
 
     /**
      * Selection and mode the file pane currently shows, if any.
@@ -257,21 +267,25 @@ internal class GitReflogPanel(private val project: Project) : SimpleToolWindowPa
         this.repository = repository
         this.ref = GitReflogRef.HEAD
         this.refs = listOf(GitReflogRef.HEAD)
-        this.limit = GitReflogReader.PAGE_SIZE
+        // Branch names do not carry over either, so neither does what was read of the reflogs behind them.
+        limits.clear()
         reload()
     }
 
-    /** Switches the tab to the reflog of [ref] in the current repository. */
+    /**
+     * Switches the tab to the reflog of [ref] in the current repository.
+     *
+     * The ref is read from its first page the first time it is shown, and from as far as it had been read on
+     * every return to it - which is what [limits] is for.
+     */
     fun selectRef(ref: GitReflogRef) {
         this.ref = ref
-        // Another reflog is another length; how far the previous one had been read says nothing about this one.
-        this.limit = GitReflogReader.PAGE_SIZE
         reload()
     }
 
     /** Reads one more page of older records on top of what is already shown. */
     fun loadMore() {
-        limit += GitReflogReader.PAGE_SIZE
+        limits[ref] = limit + GitReflogReader.PAGE_SIZE
         reload()
     }
 

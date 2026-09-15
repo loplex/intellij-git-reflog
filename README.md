@@ -233,8 +233,10 @@ the last page has been read.
 This matters because the filters run over what was read: an entry older than the last page is not found by
 filtering either. The selected entry survives a Load More the same way it survives a re-read.
 
-Switching the ref or the repository starts again at one page, since how far the previous reflog had been read
-says nothing about the new one.
+Switching the repository starts again at one page for every ref: another repository has another set of refs, and
+what was read of the previous one's says nothing here. Switching the ref does not. A ref is read from its first
+page the first time it is shown - another reflog being another length - and from as far as it had been read on
+every return to it, so that a glance at the stash does not cost the pages of HEAD that were loaded to look at.
 
 ## How the tab is wired in
 
