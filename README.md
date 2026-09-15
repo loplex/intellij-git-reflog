@@ -281,7 +281,7 @@ every return to it, so that a glance at the stash does not cost the pages of HEA
 
 ## Plugin structure
 
-A generated project contains the following content structure:
+The project has the following content structure:
 
 ```
 .
@@ -290,11 +290,14 @@ A generated project contains the following content structure:
 │   ├── wrapper/            Gradle Wrapper
 │   ├── libs.versions.toml  Version catalog
 ├── src                     Plugin sources
-│   └── main
-│       ├── kotlin/         Kotlin production sources
-│       └── resources/      Plugin resources
-│           ├── META-INF/   Plugin configuration file and logo
-│           └── messages/   Message bundles
+│   ├── main
+│   │   ├── kotlin/         Kotlin production sources
+│   │   └── resources/      Plugin resources
+│   │       ├── META-INF/   Plugin configuration file and logo
+│   │       └── messages/   Message bundles
+│   └── test/kotlin/        Tests
+├── tools/                  Scripts for working on the plugin
+│   └── reflog-playground.sh  Builds a repository whose reflog covers every case the tab has
 ├── .gitignore              Git ignoring rules
 ├── build.gradle.kts        Gradle build configuration
 ├── gradle.properties       Gradle configuration properties
