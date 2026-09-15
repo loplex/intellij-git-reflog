@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-15
+
 ### Added
 
 - Reflog tab in the Git tool window, listing the reflog of the selected repository.
@@ -25,3 +27,6 @@
   Several entries can now be selected, which the file pane used to have no answer for.
 - Show Diff, Select in Git Log and Copy Revision Number on the selected entry.
 - Checkout Revision, New Branch from Here and Reset Current Branch to Here on the selected entry.
+
+[Unreleased]: https://github.com/loplex/intellij-git-reflog/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/loplex/intellij-git-reflog/commits/v0.1.0
