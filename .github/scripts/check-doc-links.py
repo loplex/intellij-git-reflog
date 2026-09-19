@@ -19,7 +19,21 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+
+def repository_root() -> Path:
+    """The repository being checked, which is not the same question as where this file lives.
+
+    Asked for its parent's parent, as it was while it lived in `tools/`, this file would answer `.github`, and
+    `git ls-files` run from there lists only the documents under `.github`: every other document would go
+    unchecked while the run reported every link resolving.
+    """
+    found = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+    if found.returncode != 0:
+        raise SystemExit("check-doc-links.py has to be run inside the repository it is checking")
+    return Path(found.stdout.strip())
+
+
+REPO = repository_root()
 
 # ``` or ~~~ fences, and the inline code spans between backticks. Blanked before anything is read out of a
 # document, so that a `#` comment in a shell sample is not taken for a heading and a link in an example is not

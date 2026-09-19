@@ -35,7 +35,7 @@ your own. They do start a headless IDE, which is what most of their runtime is.
 The documents are checked too, by a script of their own that needs neither Gradle nor a JDK:
 
 ```bash
-tools/check-doc-links.py
+.github/scripts/check-doc-links.py
 ```
 
 It resolves every link they make into the repository - at each other, at their own sections, at source files -
@@ -83,7 +83,7 @@ Three Gradle tasks, wrapped so the IDE can start them from the gutter. Run IDE a
 .
 ├── .claude/skills/         Skills tracked with the sources, one per task worth not rediscovering
 ├── .github/
-│   ├── scripts/            The README's claims, and their tests
+│   ├── scripts/            The README's claims, the documents' links, and their tests
 │   └── workflows/          Build, Prepare release, Publish the accepted release
 ├── .run/                   Run/Debug configurations, described above
 ├── docs/                   usage.md, design.md, and the screenshot the README shows
@@ -98,7 +98,6 @@ Three Gradle tasks, wrapped so the IDE can start them from the gutter. Run IDE a
 │   │       └── messages/   Message bundle
 │   └── test/kotlin/        Tests
 ├── tools/
-│   ├── check-doc-links.py    Resolves every link the documents make into the repository
 │   └── reflog-playground.sh  Builds a repository whose reflog covers every case the tab has
 ├── .python-version         The Python the scripts under .github/scripts/ are run with
 ├── build.gradle.kts        Build configuration

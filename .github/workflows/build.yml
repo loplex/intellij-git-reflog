@@ -36,7 +36,7 @@ jobs:
         with:
           python-version-file: .python-version
 
-      - run: tools/check-doc-links.py
+      - run: .github/scripts/check-doc-links.py
 
       - run: python3 -m unittest discover -s .github/scripts
 
