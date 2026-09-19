@@ -9,6 +9,14 @@ plugins {
 
 val pluginVersion = providers.gradleProperty("version")
 
+kotlin {
+    // Said here rather than left to whichever JDK happens to run Gradle. On CI that is the one the workflow
+    // installs and the build is reproducible by accident; off CI it is whatever the developer has, and a build
+    // whose bytecode depends on that is one whose output nobody can compare. 21 is what the platform this
+    // compiles against requires.
+    jvmToolchain(21)
+}
+
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
     testImplementation(libs.junit)
