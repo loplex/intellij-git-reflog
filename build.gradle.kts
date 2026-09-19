@@ -58,9 +58,9 @@ intellijPlatform {
         version = pluginVersion
 
         ideaVersion {
-            // PROBE: 2024.3, three releases below the platform this still compiles against. The question
-            // is whether anything the tab reaches for is missing there.
-            sinceBuild = "243"
+            // PROBE: 2025.1, the lowest the previous probe left standing. 2024.3 needs more than a source
+            // change and is not what this one asks about.
+            sinceBuild = "251"
 
             // Left unbounded on purpose. An upper bound turns every IDE update into a release the plugin needs
             // in order to keep working, and there is nothing known about this tab that a later IDE breaks -

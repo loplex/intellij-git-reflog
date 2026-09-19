@@ -29,7 +29,12 @@ internal class GitReflogContentProvider(private val project: Project) : ChangesV
  * re-evaluates the tab against, and it is already in place when the Git tool window is built.
  */
 internal class GitReflogContentVisibilityPredicate : Predicate<Project> {
-    override fun test(project: Project): Boolean = ProjectLevelVcsManager.getInstance(project).checkVcsIsActive(GitVcs.NAME)
+    override fun test(project: Project): Boolean =
+        // PROBE: the service is asked for by its interface rather than through getInstance(). Both name the same
+        // object, but getInstance() sits on a companion in 2025.3 and on neither in 2025.2, so compiling the call
+        // emits a getstatic against a field older IDEs have not got. Looking the service up says nothing about
+        // where the accessor lives.
+        project.getService(ProjectLevelVcsManager::class.java).checkVcsIsActive(GitVcs.NAME)
 }
 
 /** Places the tab right behind the Log tab, which is the one it complements. */
