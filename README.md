@@ -43,7 +43,7 @@ That leaves a zip under `build/distributions/`, which **Settings | Plugins | ⚙
 takes.
 
 It is built against IntelliJ IDEA 2025.3.5 and needs Git to be an active VCS in the project. It declares no
-upper bound on the IDE version, so a later IDE is allowed to run it rather than refused; 2025.3 is the earliest
+upper bound on the IDE version, so a later IDE is allowed to run it rather than refused; 2025.1 is the earliest
 it will install into.
 
 ## Where the rest is

@@ -74,8 +74,13 @@ intellijPlatform {
         version = pluginVersion
 
         ideaVersion {
-            // 2025.3, the platform the tab is built against and the first with the APIs it uses.
-            sinceBuild = "253"
+            // 2025.1, which the Plugin Verifier says rather than the generator that picked the platform. It
+            // reports 251, 252, 253, 261 and 262 all compatible, once the VCS manager is reached without
+            // touching a companion those older IDEs have not got - see GitReflogContentVisibilityPredicate.
+            //
+            // 2024.3 stays out, and not over anything this source does: it wants
+            // kotlin.coroutines.jvm.internal.SpillingKt, which its bundled Kotlin runtime does not carry.
+            sinceBuild = "251"
 
             // Left unbounded on purpose. An upper bound turns every IDE update into a release the plugin needs
             // in order to keep working, and there is nothing known about this tab that a later IDE breaks -

@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+### Changed
+
+- The tab installs into IntelliJ IDEA 2025.1 and 2025.2 as well as 2025.3. Nothing about it needed 2025.3, and
+  two things merely assumed it: one call reached the VCS manager through an accessor that had moved onto a
+  companion object in 2025.3, which the older IDEs have not got, and the compiler it was built with emitted
+  coroutine metadata their Kotlin runtime cannot read.
+
 ## [0.1.0] - 2026-09-15
 
 ### Added
