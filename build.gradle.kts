@@ -1,5 +1,6 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.models.ProductRelease
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -57,8 +58,9 @@ intellijPlatform {
         version = pluginVersion
 
         ideaVersion {
-            // 2025.3, the platform the tab is built against and the first with the APIs it uses.
-            sinceBuild = "253"
+            // PROBE: 2024.3, three releases below the platform this still compiles against. The question
+            // is whether anything the tab reaches for is missing there.
+            sinceBuild = "243"
 
             // Left unbounded on purpose. An upper bound turns every IDE update into a release the plugin needs
             // in order to keep working, and there is nothing known about this tab that a later IDE breaks -
@@ -91,7 +93,12 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            recommended()
+            // PROBE: recommended() picks IDEs by its own list and would never look at 2024.3, so it cannot
+            // answer this. select() takes its lower bound from the patched since-build, which is now 243, and
+            // walks every released IDE from there up.
+            select {
+                channels = listOf(ProductRelease.Channel.RELEASE)
+            }
         }
     }
 }
