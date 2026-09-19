@@ -83,6 +83,7 @@ Three Gradle tasks, wrapped so the IDE can start them from the gutter. Run IDE a
 .
 ├── .claude/skills/         Skills tracked with the sources, one per task worth not rediscovering
 ├── .github/
+│   ├── scripts/            The README's claims, and their tests
 │   └── workflows/          Build, Prepare release, Publish the accepted release
 ├── .run/                   Run/Debug configurations, described above
 ├── docs/                   usage.md, design.md, and the screenshot the README shows
@@ -99,6 +100,7 @@ Three Gradle tasks, wrapped so the IDE can start them from the gutter. Run IDE a
 ├── tools/
 │   ├── check-doc-links.py    Resolves every link the documents make into the repository
 │   └── reflog-playground.sh  Builds a repository whose reflog covers every case the tab has
+├── .python-version         The Python the scripts under .github/scripts/ are run with
 ├── build.gradle.kts        Build configuration
 ├── LICENSE                 Apache 2.0
 ├── gradle.properties       Group, the version being worked on, the tag prefix, and the Gradle caches
@@ -299,7 +301,8 @@ so that the tag stays reachable.
 The upload API updates a plugin that is already listed. It cannot create the listing: JetBrains require the
 first version of a new plugin to be uploaded through the Marketplace's own **Upload plugin** form, and it goes
 through their review before it appears. Only from the second version onwards does the workflow above do the
-whole job.
+whole job. That has been done here: 0.1.0 was uploaded by hand, and the listing it created is what every
+release after it updates.
 
 A release like that is finished by running the job in `release-publish.yml` again once the version is approved,
 within the 30 days GitHub lets a run be re-run. The re-run finds the release on `main` already and carries

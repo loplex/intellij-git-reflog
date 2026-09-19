@@ -2,3 +2,6 @@
 .idea
 .intellijPlatform
 build
+
+# Byte-code left behind by running the scripts under .github/scripts/ and their tests.
+__pycache__

@@ -1,6 +1,8 @@
 # Git Reflog
 
 [![Build](https://github.com/loplex/intellij-git-reflog/actions/workflows/build.yml/badge.svg)](https://github.com/loplex/intellij-git-reflog/actions/workflows/build.yml)
+[![Version](https://img.shields.io/jetbrains/plugin/v/34293.svg)](https://plugins.jetbrains.com/plugin/34293-git-reflog)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/34293.svg)](https://plugins.jetbrains.com/plugin/34293-git-reflog)
 
 *An IntelliJ IDEA plugin that puts `git reflog` in the Git tool window.*
 
@@ -28,7 +30,10 @@ This plugin adds a **Reflog** tab to the Git tool window, beside the Log.
 
 ## Installing it
 
-The plugin is not on the JetBrains Marketplace yet, so it is installed from a build of its own:
+From **Settings | Plugins | Marketplace**, by searching for *Git Reflog*, or from the
+[plugin page](https://plugins.jetbrains.com/plugin/34293-git-reflog).
+
+It can also be built and installed from these sources:
 
 ```bash
 ./gradlew buildPlugin
