@@ -37,7 +37,7 @@ REPO = repository_root()
 
 # ``` or ~~~ fences, and the inline code spans between backticks. Blanked before anything is read out of a
 # document, so that a `#` comment in a shell sample is not taken for a heading and a link in an example is not
-# taken for a link.
+# taken for a link - except that headings are read with their inline code intact, see anchors().
 FENCE = re.compile(r"^(?P<fence>```+|~~~+).*?^(?P=fence)[^\S\n]*$", re.MULTILINE | re.DOTALL)
 INLINE_CODE = re.compile(r"`[^`\n]*`")
 
@@ -48,13 +48,20 @@ REFERENCE_LINK = re.compile(r"^\[[^\]]+\]:\s*<?(\S+?)>?\s*(?:\"[^\"]*\")?$", re.
 EXTERNAL = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|//)", re.IGNORECASE)
 
 
+def blanked(match: re.Match) -> str:
+    return re.sub(r"[^\n]", " ", match.group(0))
+
+
+def blank_fences(text: str) -> str:
+    """Replaces fenced code with spaces, keeping every other character at the offset it had."""
+
+    return FENCE.sub(blanked, text)
+
+
 def blank_code(text: str) -> str:
-    """Replaces code with spaces, keeping every other character at the offset it had."""
+    """Replaces fenced and inline code with spaces, keeping every other character at the offset it had."""
 
-    def blanked(match: re.Match) -> str:
-        return re.sub(r"[^\n]", " ", match.group(0))
-
-    return INLINE_CODE.sub(blanked, FENCE.sub(blanked, text))
+    return INLINE_CODE.sub(blanked, blank_fences(text))
 
 
 def slug(heading: str) -> str:
@@ -72,9 +79,11 @@ def anchors(text: str) -> set[str]:
     """Every anchor a document offers. A heading repeating one already taken gets -1, -2 and so on, as GitHub
     numbers them."""
 
+    # Only the fences are blanked here. Inline code in a heading is part of its anchor - `slug` keeps what the
+    # backticks hold - and blanking it first turned ``### A `refs/` pattern`` into `a---------pattern`.
     seen: dict[str, int] = {}
     found = set()
-    for _, heading in HEADING.findall(blank_code(text)):
+    for _, heading in HEADING.findall(blank_fences(text)):
         base = slug(heading)
         count = seen.get(base, 0)
         seen[base] = count + 1
