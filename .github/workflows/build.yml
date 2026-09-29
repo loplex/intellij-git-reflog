@@ -1,5 +1,8 @@
 name: Build
 
+# `branches` keeps this off tags: publishing a release creates its tag, and an unfiltered push trigger would run
+# for it too. `workflow_dispatch` is how the release asks for this once it has landed on main, a push made with
+# GITHUB_TOKEN starting no run of its own.
 on:
   push:
     branches: [main]
@@ -14,14 +17,34 @@ permissions:
   contents: read
 
 jobs:
-  docs:
-    name: Check the documentation's links
+  # Neither Java nor Gradle: these read Markdown, the tags and the working tree, and answer in seconds.
+  checks:
+    name: Check the documents and the release rules
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The released sections are compared against the tags that released them, and a shallow checkout has
+          # neither those tags nor the history ancestry reads: every rule would pass having compared nothing.
+          fetch-depth: 0
 
-      # Neither Java nor Gradle: it reads Markdown and the working tree, and answers in seconds.
       - run: tools/check-doc-links.py
+
+      # The release rules, asked of loplex/release-ci rather than of a copy kept here, pinned to a release tag as
+      # its README asks of every caller:
+      #
+      # - version: whether the version gradle.properties names may be released after what is tagged, so that a
+      #   version no release could be cut from is red here rather than in the release run;
+      # - changelog: whether every released section still reads as its tag has it. It is the release notes on
+      #   GitHub and the change notes on the Marketplace both, and a three-way merge can put an entry added to
+      #   [Unreleased] into a released section, cleanly, because Git cannot see that a heading is a container;
+      # - ancestry: whether every released tag is still reachable. A squash merge, a rebase merge, `Update with
+      #   rebase` or a force-push leaves a tag naming a commit no branch reaches, and asking the property holds
+      #   for every way GitHub adds of doing that.
+      - uses: loplex/release-ci/check-release@v0.2.0
+        with:
+          source: gradle.properties
+          checks: version changelog ancestry
 
   test:
     name: Test

@@ -1,49 +1,106 @@
-name: Publish to the Marketplace
+name: Publish the accepted release
 
-# Runs when a drafted release is published, which is the moment the release is accepted. The archive it carries
-# is the one built and signed from the tag, so what reaches the Marketplace is the file that was there to be
-# tried rather than a second build of the same sources.
+# Runs when a drafted release is published, which is the moment the release is accepted and the moment its tag
+# comes into being. GitHub reads this file from the commit the tag names, so a change to it reaches the next
+# release cut after the change, never one already drafted.
+#
+# Carrying the release back and uploading it are steps of one job, the way loplex/release-ci lays them out, and
+# neither waits on the other to succeed: a release that did not make it back onto `main` is out all the same and
+# the Marketplace should serve it, and a Marketplace upload that fails is no reason for `main` to go on
+# disagreeing with a tag that exists. Either failing still fails the job, so neither is missed.
+#
+# A first version, which the upload API cannot create a listing for, is uploaded by hand and the job is re-run
+# once it is approved: a re-run finds the release already on `main` and carries nothing back a second time.
 on:
   release:
-    types: [released]
+    # `published` rather than `released`: the latter does not fire for a draft published as a pre-release, and
+    # a pre-release is published the same way as a release, to its own Marketplace channel.
+    types: [published]
 
-permissions:
-  contents: read
+# One run per release at a time: two runs for one release would race to land it.
+concurrency:
+  group: release-publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
 
 jobs:
   publish:
-    name: Upload the accepted archive
+    name: Carry the release back and upload the accepted archive
     runs-on: ubuntu-latest
+    permissions:
+      # The pushes onto main and the release branch, and reading the release's archive.
+      contents: write
+      # The pull request that carries the release where it cannot be pushed onto main.
+      pull-requests: write
+      # Asking for a Build run over main once the release has landed there: a push made with GITHUB_TOKEN
+      # starts none, and asking for one by hand is a write to Actions, answered 403 without this.
+      actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
 
-      - uses: actions/setup-java@v4
+      # The next version opened in gradle.properties, whatever landed on main since the release was cut merged
+      # in, and main moved onto the release branch by a fast-forward push - so that the tag stays on main's
+      # first-parent history, which a squash, a rebase or even a merge commit would not keep it on. Where that
+      # push cannot be made, a pull request carries the release instead.
+      - uses: loplex/release-ci/release-flow/merge-back@v0.2.0
+        id: back
         with:
-          distribution: zulu
-          java-version: 21
+          source: gradle.properties
+          tag: ${{ github.event.release.tag_name }}
+          default-branch: ${{ github.event.repository.default_branch }}
+          check-workflow: build.yml
 
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Take the archive off the release
+      # The archive the draft carried, which is the one that was accepted, rather than a second build of the
+      # same sources. Exactly one is expected: publishing takes exactly one, and two would leave it to chance
+      # which of them the Marketplace is handed.
+      - name: Take the accepted archive off the release
+        id: accepted
+        if: ${{ !cancelled() && steps.back.outputs.version != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          mkdir -p build/distributions
-          gh release download "${{ github.event.release.tag_name }}" \
-            --pattern '*-signed.zip' \
-            --dir build/distributions
-          ls -l build/distributions
+          gh release download "$TAG" --pattern '*.zip' --dir "$RUNNER_TEMP/accepted"
+          archives=("$RUNNER_TEMP"/accepted/*.zip)
+          if [ "${#archives[@]}" -ne 1 ]; then
+            echo "::error::the release carries ${#archives[@]} archive(s), and publishing takes exactly one"
+            exit 1
+          fi
+          echo "archive=${archives[0]}" >> "$GITHUB_OUTPUT"
 
-      - name: Publish
-        env:
-          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-          # signPlugin runs as a dependency of publishPlugin and needs these, although what is uploaded is the
-          # archive named below rather than anything it produces.
-          CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
+      # The plugin as the Marketplace knows it, read out of the checkout rather than written down a second time
+      # here, where it could come to disagree with the id the archive carries.
+      - name: Settle which plugin the Marketplace is asked about
+        id: plugin
+        if: ${{ !cancelled() && steps.accepted.outcome == 'success' }}
         run: |
-          archive="$(ls build/distributions/*-signed.zip)"
-          ./gradlew publishPlugin -PpublishArchive="${archive}"
+          id="$(sed -n 's:.*<id>\(.*\)</id>.*:\1:p' src/main/resources/META-INF/plugin.xml | head -1)"
+          if [ -z "$id" ]; then
+            echo "::error::plugin.xml names no <id>"
+            exit 1
+          fi
+          echo "id=${id}" >> "$GITHUB_OUTPUT"
+
+      # Uploaded over the Marketplace API, to the channel the version's pre-release suffix names, and then
+      # asked back of the Marketplace and compared by payload: what the release needs to be true is that the
+      # Marketplace serves the archive that was accepted, and the upload's own answer does not decide that.
+      - uses: loplex/release-ci/intellij/publish@v0.2.0
+        id: publish
+        if: ${{ !cancelled() && steps.plugin.outcome == 'success' }}
+        with:
+          plugin-id: ${{ steps.plugin.outputs.id }}
+          version: ${{ steps.back.outputs.version }}
+          archive: ${{ steps.accepted.outputs.archive }}
+          token: ${{ secrets.PUBLISH_TOKEN }}
+
+      # Said on the release, because that is where someone who has the archive in hand will be looking, and they
+      # have no reason to go through the runs of a workflow to find out that one of them went red. A publish that
+      # failed, or never ran because a step before it failed, puts a warning at the top of the release notes; a
+      # run repeated later whose publish completes takes it back off.
+      - uses: loplex/release-ci/release-flow/warn@v0.2.0
+        if: ${{ !cancelled() }}
+        with:
+          tag: ${{ github.event.release.tag_name }}
+          outcome: ${{ steps.publish.outcome }}
+          to: the JetBrains Marketplace
