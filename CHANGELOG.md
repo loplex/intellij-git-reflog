@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.1.1-beta.1] - 2026-09-30
+
 ### Changed
 
 - The tab installs into IntelliJ IDEA 2025.1 and 2025.2 as well as 2025.3. Nothing about it needed 2025.3, and
@@ -35,5 +37,6 @@
 - Show Diff, Select in Git Log and Copy Revision Number on the selected entry.
 - Checkout Revision, New Branch from Here and Reset Current Branch to Here on the selected entry.
 
-[Unreleased]: https://github.com/loplex/intellij-git-reflog/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/loplex/intellij-git-reflog/compare/v0.1.1-beta.1...HEAD
+[0.1.1-beta.1]: https://github.com/loplex/intellij-git-reflog/compare/v0.1.0...v0.1.1-beta.1
 [0.1.0]: https://github.com/loplex/intellij-git-reflog/commits/v0.1.0
