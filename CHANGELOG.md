@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-30
+
+### Changed
+
+- The tab installs into IntelliJ IDEA 2025.1 and 2025.2 as well as 2025.3. Nothing about it needed 2025.3, and
+  two things merely assumed it: one call reached the VCS manager through an accessor that had moved onto a
+  companion object in 2025.3, which the older IDEs have not got, and the compiler it was built with emitted
+  coroutine metadata their Kotlin runtime cannot read.
+
 ## [0.1.1-beta.1] - 2026-09-30
 
 ### Changed
@@ -37,6 +46,7 @@
 - Show Diff, Select in Git Log and Copy Revision Number on the selected entry.
 - Checkout Revision, New Branch from Here and Reset Current Branch to Here on the selected entry.
 
-[Unreleased]: https://github.com/loplex/intellij-git-reflog/compare/v0.1.1-beta.1...HEAD
+[Unreleased]: https://github.com/loplex/intellij-git-reflog/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/loplex/intellij-git-reflog/compare/v0.1.1-beta.1...v0.1.1
 [0.1.1-beta.1]: https://github.com/loplex/intellij-git-reflog/compare/v0.1.0...v0.1.1-beta.1
 [0.1.0]: https://github.com/loplex/intellij-git-reflog/commits/v0.1.0
